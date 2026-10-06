@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build and test output
+dist/
+coverage/
+
+# Environment: only the example file is committed
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
