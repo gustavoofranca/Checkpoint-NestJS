@@ -4,6 +4,7 @@ import { createLoggerParams } from './common/logging/create-logger-params';
 import type { AppConfig } from './config/app-config';
 import { ConfigModule } from './config/config.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { GamesModule } from './modules/games/games.module';
 import { HealthModule } from './modules/health/health.module';
 
 @Module({})
@@ -15,6 +16,7 @@ export class AppModule {
         ConfigModule.forRoot(config),
         LoggerModule.forRoot(createLoggerParams(config)),
         AuthModule,
+        GamesModule,
         HealthModule,
       ],
     };

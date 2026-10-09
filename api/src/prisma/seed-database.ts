@@ -1,4 +1,5 @@
 import { slugify } from '../common/text/slugify';
+import { titleSortKey } from '../common/text/title-sort-key';
 import type { PrismaClient } from '../generated/prisma/client';
 import type { CatalogGame, CatalogSnapshot } from '../modules/sync/catalog-game';
 
@@ -57,6 +58,7 @@ async function upsertGenres(
 function catalogFields(game: CatalogGame) {
   return {
     title: game.title,
+    titleSort: titleSortKey(game.title),
     shortDescription: game.shortDescription,
     headerImageUrl: game.headerImageUrl,
     releaseDate: game.releaseDate === null ? null : new Date(`${game.releaseDate}T00:00:00Z`),

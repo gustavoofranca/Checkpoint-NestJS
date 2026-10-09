@@ -39,4 +39,6 @@ a promotion followed by a refresh; without a token both answer 401.
 ### Public routes
 
 `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` (they act on
-credentials or the cookie, not on an access token), `GET /health/live`, `GET /health/ready`.
+credentials or the cookie, not on an access token), `GET /games`, `GET /games/:slug`,
+`GET /genres` (the catalog is readable by anyone), `GET /health/live`, `GET /health/ready`,
+and `GET /docs` with `/docs/openapi.json` (off in production unless `ENABLE_DOCS=true`).

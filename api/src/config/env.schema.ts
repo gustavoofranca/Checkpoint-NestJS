@@ -21,6 +21,8 @@ export const envSchema = z.object({
     .pipe(z.array(origin).min(1)),
   DATABASE_URL: databaseUrl,
   REDIS_URL: z.url({ protocol: /^rediss?$/ }),
+  // Swagger UI is always on outside production; in production only when this is "true".
+  ENABLE_DOCS: z.enum(['true', 'false']).default('false'),
   JWT_SECRET: z
     .string()
     .refine((value) => Buffer.byteLength(value, 'utf8') >= MIN_JWT_SECRET_BYTES, {
