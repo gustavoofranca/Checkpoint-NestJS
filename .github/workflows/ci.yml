@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: api
+    env:
+      POSTGRES_USER: checkpoint
+      POSTGRES_DB: checkpoint
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint and format check
+        run: |
+          npm run lint
+          npm run format:check
+
+      - name: Type check
+        run: npm run typecheck
+
+      # Generated per run and masked in the log; nothing is stored in the repository.
+      - name: Generate throwaway service credentials
+        working-directory: .
+        run: |
+          pg_password="$(openssl rand -hex 32)"
+          redis_password="$(openssl rand -hex 32)"
+          demo_password="$(openssl rand -hex 16)"
+          echo "::add-mask::${pg_password}"
+          echo "::add-mask::${redis_password}"
+          echo "::add-mask::${demo_password}"
+          {
+            echo "POSTGRES_PASSWORD=${pg_password}"
+            echo "REDIS_PASSWORD=${redis_password}"
+            echo "DATABASE_URL=postgresql://${POSTGRES_USER}:${pg_password}@localhost:5433/${POSTGRES_DB}"
+            echo "REDIS_URL=redis://:${redis_password}@localhost:6379"
+            echo "SEED_DEMO_PASSWORD=${demo_password}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Start PostgreSQL and Redis
+        working-directory: .
+        run: docker compose up --detach --wait postgres redis
+
+      - name: Apply migrations to the empty database
+        run: npm run db:migrate
+
+      - name: Check that the migrations produce the Prisma schema
+        run: npm run db:drift
+
+      - name: Unit and e2e tests with coverage
+        run: npm run test:cov
+
+      - name: Build
+        run: npm run build
+
+      - name: Seed twice and promote an admin with the built CLIs
+        run: |
+          npm run db:seed
+          npm run db:seed
+          npm run admin:promote -- ana@checkpoint.test
