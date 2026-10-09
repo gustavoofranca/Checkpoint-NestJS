@@ -1,13 +1,23 @@
-import type { Role } from '../../../generated/prisma/client';
+import { ApiProperty } from '@nestjs/swagger';
+import { Role } from '../../../generated/prisma/client';
 
 // The caller's own account. Built from an explicit field list; the password hash never leaves
 // the service layer.
-export interface UserResponse {
-  id: string;
-  email: string;
-  username: string;
-  role: Role;
-  createdAt: Date;
+export class UserResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ format: 'email' })
+  email!: string;
+
+  @ApiProperty({ example: 'demo_ana' })
+  username!: string;
+
+  @ApiProperty({ enum: Role })
+  role!: Role;
+
+  @ApiProperty({ type: String, format: 'date-time' })
+  createdAt!: Date;
 }
 
 export const USER_RESPONSE_SELECT = {

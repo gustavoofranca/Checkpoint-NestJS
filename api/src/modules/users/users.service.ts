@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type Role } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { USER_RESPONSE_SELECT, type UserResponse } from './dto/user-response.dto';
+import { USER_RESPONSE_SELECT, type UserResponseDto } from './dto/user-response.dto';
 
 // Same message whether the email or the username is taken, so registration does not confirm
 // which one exists (docs/SECURITY.md section 2).
@@ -24,7 +24,7 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   // The unique constraints decide; there is no read-then-write check to race.
-  async create(user: NewUser): Promise<UserResponse> {
+  async create(user: NewUser): Promise<UserResponseDto> {
     try {
       return await this.prisma.user.create({
         data: { email: user.email, username: user.username, passwordHash: user.passwordHash },
@@ -45,7 +45,7 @@ export class UsersService {
     });
   }
 
-  async findAccount(id: string): Promise<UserResponse> {
+  async findAccount(id: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: USER_RESPONSE_SELECT,
