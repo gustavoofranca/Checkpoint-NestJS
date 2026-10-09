@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module';
 import { APP_OPTIONS, configureApp } from '../../src/common/configure-app';
 import type { AppConfig } from '../../src/config/app-config';
+import { recordLeakingResponses } from './response-leak-guard';
 import { testConfig } from './test-config';
 
 interface TestAppOptions {
@@ -19,6 +20,8 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<NestE
   }).compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>(APP_OPTIONS);
+  // First, so it sees every response, error responses included (test/support/e2e-setup.ts).
+  app.use(recordLeakingResponses);
   configureApp(app);
   await app.init();
   return app;
