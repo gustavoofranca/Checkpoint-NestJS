@@ -17,9 +17,9 @@
 - Configuration through a typed config service, never `process.env` outside `config/`
 - DTOs for every body, query and params object, with Swagger decorators so the OpenAPI
   document is complete and accurate
-- Decorators and Vitest: Nest relies on decorator metadata, which the default Vitest
-  transformer does not emit. Configure the SWC plugin for Vitest and verify dependency
-  injection works in the first test before writing more.
+- Decorators and Vitest: Nest relies on decorator metadata. Vitest 5 transforms TypeScript
+  with Oxc, which emits it because `tsconfig.json` sets `emitDecoratorMetadata`
+  (`docs/adr/0001`). `test/di-toolchain.spec.ts` proves dependency injection works; keep it.
 
 ## Prisma
 

@@ -17,3 +17,6 @@ coverage/
 .vscode/
 .idea/
 .DS_Store
+
+# Generated Prisma client (rebuilt by `npm install` through postinstall)
+api/src/generated/

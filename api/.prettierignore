@@ -1,0 +1,5 @@
+dist
+coverage
+package-lock.json
+src/generated
+prisma/data/steam-snapshot.json
