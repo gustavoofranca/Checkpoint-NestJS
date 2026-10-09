@@ -14,6 +14,62 @@ Updated by the agent at the end of every phase. Newest entry first.
 
 ---
 
+### P2 — Authentication — 2026-10-09
+- Status: done
+- Built:
+  - `src/modules/auth`: `POST /auth/register`, `/login`, `/refresh`, `/logout`, `GET /auth/me`;
+    `AccessTokenService` (JWT), `RefreshTokenService` (rotation, reuse detection), refresh cookie
+    helpers, `JwtAuthGuard` and `RolesGuard` registered globally, `TrustedOriginGuard`
+  - `src/common/auth`: `@Public()`, `@Roles()`, `@CurrentUser()`, `AuthenticatedUser`
+  - `src/modules/users`: `UsersService` (create, credentials lookup, own account), response
+    shape built from an explicit field list
+  - `cookie-parser` in the pipeline; health endpoints marked `@Public()`
+  - Tests: `test/auth.e2e-spec.ts` (38 tests), test-only protected routes, a suite-wide guard
+    that fails any e2e test whose responses carry a password hash, token hash or Argon2 string
+  - `api/test/README.md` with the test layout and the authorization matrix;
+    `docs/adr/0004` (token design)
+- Decisions not dictated by the spec:
+  - Register answers 409 with one message for a taken email or username ("This email or
+    username cannot be used."). Without an email flow, registration cannot fully hide that an
+    email exists; the shared message and hashing before the insert keep the signal minimal.
+    Rate limiting (P5) is the remaining control.
+  - Login on an unknown email verifies the password against a hash computed at startup, so both
+    failures cost one Argon2 run (asserted with a spy on the real `PasswordHasher`)
+  - Refresh rotation claims the token with a conditional update; a token that cannot be claimed
+    because it is revoked counts as reuse. Two concurrent refreshes with one token therefore end
+    the session (`docs/adr/0004`)
+  - `refresh` and `logout` require an allow-listed `Origin` header (403 otherwise); logout is
+    idempotent (204 without a session)
+  - Claims are validated after signature checks (`sub` must be a UUID, `role` a known role);
+    the role in the token applies until the next refresh
+  - `@Roles()` is only for restricting; routes open to every signed-in user carry no decorator
+  - Emails are trimmed and lowercased by the DTO; usernames must already be lowercase (400
+    otherwise) rather than silently changed
+  - JWT issuer `checkpoint-api`, audience `checkpoint`
+- Dependencies added (name@version): @nestjs/jwt@12.0.2 (uses jsonwebtoken 9.0.3),
+  cookie-parser@1.4.7; dev: @types/cookie-parser@1.4.10
+- Verification (command → result):
+  - `npm run test:cov` → 174 of 174 tests; lines 97.3%, branches 87.4%
+  - Full flow register → login → me → refresh → logout → refresh rejected: passes
+  - Reusing a rotated refresh token → 401, and no unrevoked token remains in the family
+  - Two concurrent refreshes with one token → statuses [200, 401], family revoked
+  - Expired, malformed, other-secret, `alg: none`, HS512, wrong issuer, wrong audience, unknown
+    role and missing-subject tokens → 401 with Problem Details
+  - `role: "ADMIN"` in the register body → 400, no user created
+  - Unknown email and wrong password → same status and body apart from the request id
+  - Refresh cookie: `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/v1/auth`, 30 days
+  - `npm run lint`, `format:check`, `typecheck`, `build` pass; `npm audit --omit=dev` → 0
+- Known limitations / open questions:
+  - No rate limit on login, register and refresh yet (P5)
+  - Authentication events (login failure, reuse detected, logout) are not audit-logged yet,
+    except a warning on reuse (P7)
+  - A refresh token can only be revoked by family; there is no "sign out everywhere" endpoint,
+    which the spec does not ask for
+  - Re-throwing a non-unique database error on register is not reachable through the API (the
+    DTO enforces the same rules as the CHECK constraints) and stays uncovered
+
+---
+
 ### P1 — Database — 2026-10-09
 - Status: done
 - Built:
