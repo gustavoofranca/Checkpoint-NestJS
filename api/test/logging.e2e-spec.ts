@@ -1,7 +1,13 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { accessTokenFrom, newCredentials, refresh, refreshCookieFrom } from './support/auth';
+import {
+  accessTokenFrom,
+  newCredentials,
+  refresh,
+  refreshCookieFrom,
+  registerAndLogin,
+} from './support/auth';
 import { createTestApp } from './support/create-test-app';
 import { createTestPrismaClient, resetDatabase } from './support/database';
 import { LogCapture } from './support/log-capture';
@@ -31,6 +37,10 @@ describe('logging', () => {
     await app.close();
     await prisma.$disconnect();
   });
+
+  async function userIdOf(email: string): Promise<string> {
+    return (await prisma.user.findUniqueOrThrow({ where: { email }, select: { id: true } })).id;
+  }
 
   it('logs a forced 500 with the request id that the response carries, and nothing internal in the response', async () => {
     const response = await http().get('/api/v1/probe/crash').expect(500);
@@ -72,5 +82,26 @@ describe('logging', () => {
       expect(output).not.toContain(secret);
     }
     expect(output).toContain('[REDACTED]');
+  });
+
+  it('logs the route pattern and the caller of each completed request', async () => {
+    const signed = await registerAndLogin(app);
+    const userId = await userIdOf(signed.credentials.email);
+    logs.clear();
+
+    await http()
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${signed.accessToken}`)
+      .expect(200);
+    await http().get('/api/v1/games/no-such-game').expect(404);
+    await http().get('/api/v1/no-such-route').expect(404);
+
+    const completed = logs.entries().filter((entry) => entry.msg === 'request completed');
+    expect(completed.map((entry) => ({ route: entry.route, userId: entry.userId }))).toEqual([
+      { route: '/api/v1/auth/me', userId },
+      { route: '/api/v1/games/:slug', userId: undefined },
+      // Nest answers unknown paths from its own catch-all route.
+      { route: '/api/v1*path', userId: undefined },
+    ]);
   });
 });

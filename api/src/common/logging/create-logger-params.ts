@@ -2,6 +2,7 @@ import type { Params } from 'nestjs-pino';
 import { type DestinationStream, stdSerializers } from 'pino';
 import type { Options } from 'pino-http';
 import type { AppConfig } from '../../config/app-config';
+import { requestLogFields } from './request-log-fields';
 import { serializeError } from './serialize-error';
 
 const REDACTED_PATHS = [
@@ -20,6 +21,7 @@ export function createLoggerParams(config: AppConfig, destination?: DestinationS
     level: config.logLevel,
     // assignRequestId has already run; reuse its id so logs and responses match.
     genReqId: (request) => request.id,
+    customProps: requestLogFields,
     redact: { paths: REDACTED_PATHS, censor: '[REDACTED]' },
     // Unwrapped, so serializeError receives the Error itself. pino-http's default wrapping would
     // first copy every enumerable field of the error into a plain object (the driver's failing
