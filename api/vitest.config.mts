@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
-import { toTestDatabaseUrl } from './test/support/test-database-url.js';
+import { toTestDatabaseUrl, toTestRedisUrl } from './test/support/test-database-url.js';
 
 // e2e tests reach PostgreSQL and Redis through DATABASE_URL and REDIS_URL. Locally they come from
 // the repository's .env; in CI from the job environment, which loadEnvFile does not override.
@@ -10,9 +10,12 @@ if (existsSync(rootEnvFile)) {
   process.loadEnvFile(rootEnvFile);
 }
 
-// Every test process, the global setup included, sees the test database, never the dev one.
+// Every test process, the global setup included, sees the test databases, never the dev ones.
 if (process.env.DATABASE_URL !== undefined) {
   process.env.DATABASE_URL = toTestDatabaseUrl(process.env.DATABASE_URL);
+}
+if (process.env.REDIS_URL !== undefined) {
+  process.env.REDIS_URL = toTestRedisUrl(process.env.REDIS_URL);
 }
 
 // Nest resolves constructor dependencies from decorator metadata. Vitest transforms TypeScript
