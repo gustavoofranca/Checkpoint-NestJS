@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user';
+import { recordAudit } from '../../../common/logging/audit-log';
 import type { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 
@@ -27,8 +28,6 @@ function hashToken(token: string): string {
 // (or the client misbehaved), so the whole family is revoked (docs/adr/0004).
 @Injectable()
 export class RefreshTokenService {
-  private readonly logger = new Logger(RefreshTokenService.name);
-
   constructor(private readonly prisma: PrismaService) {}
 
   // Starts a new family: one per sign-in.
@@ -72,24 +71,27 @@ export class RefreshTokenService {
     });
   }
 
-  async revokeFamilyOf(presented: string): Promise<void> {
+  // Returns the owner of the session, or undefined when the token is unknown.
+  async revokeFamilyOf(presented: string): Promise<string | undefined> {
     const token = await this.prisma.refreshToken.findUnique({
       where: { tokenHash: hashToken(presented) },
-      select: { familyId: true },
+      select: { familyId: true, userId: true },
     });
-    if (token !== null) {
-      await this.revokeFamily(this.prisma, token.familyId, new Date());
+    if (token === null) {
+      return undefined;
     }
+    await this.revokeFamily(this.prisma, token.familyId, new Date());
+    return token.userId;
   }
 
   // Fresh read: under READ COMMITTED it sees a revocation committed by a concurrent rotation.
   private async rejectUnclaimable(tx: Db, id: string, familyId: string, now: Date) {
     const token = await tx.refreshToken.findUniqueOrThrow({
       where: { id },
-      select: { revokedAt: true },
+      select: { revokedAt: true, userId: true },
     });
     if (token.revokedAt !== null) {
-      this.logger.warn(`Refresh token reuse detected; revoking family ${familyId}`);
+      recordAudit('auth.refresh.reuse_detected', { userId: token.userId, familyId });
       await this.revokeFamily(tx, familyId, now);
     }
   }

@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { Injectable, type OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../common/auth/authenticated-user';
+import { recordAudit } from '../../common/logging/audit-log';
 import type { UserResponseDto } from '../users/dto/user-response.dto';
 import { PasswordHasher } from '../users/password-hasher';
 import { UsersService } from '../users/users.service';
@@ -38,15 +39,24 @@ export class AuthService implements OnModuleInit {
   // Hashing happens before the insert, so a taken email costs the same time as a new one.
   async register(dto: RegisterDto): Promise<UserResponseDto> {
     const passwordHash = await this.hasher.hash(dto.password);
-    return this.users.create({ email: dto.email, username: dto.username, passwordHash });
+    const user = await this.users.create({
+      email: dto.email,
+      username: dto.username,
+      passwordHash,
+    });
+    recordAudit('auth.register', { userId: user.id });
+    return user;
   }
 
   async login(dto: LoginDto): Promise<Session> {
     const user = await this.users.findCredentials(dto.email);
     const matches = await this.hasher.verify(dto.password, user?.passwordHash ?? this.dummyHash);
     if (user === null || !matches) {
+      // The user id only when the email matched an account: never the email itself.
+      recordAudit('auth.login.failed', user === null ? {} : { userId: user.id });
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
+    recordAudit('auth.login.succeeded', { userId: user.id });
     const identity = { id: user.id, role: user.role };
     return this.session(identity, await this.refreshTokens.issue(user.id));
   }
@@ -63,8 +73,12 @@ export class AuthService implements OnModuleInit {
   }
 
   async logout(presented: string | undefined): Promise<void> {
-    if (presented !== undefined) {
-      await this.refreshTokens.revokeFamilyOf(presented);
+    if (presented === undefined) {
+      return;
+    }
+    const userId = await this.refreshTokens.revokeFamilyOf(presented);
+    if (userId !== undefined) {
+      recordAudit('auth.logout', { userId });
     }
   }
 

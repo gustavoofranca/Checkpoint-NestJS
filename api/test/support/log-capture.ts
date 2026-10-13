@@ -27,4 +27,17 @@ export class LogCapture implements DestinationStream {
       return Object.fromEntries(Object.entries(parsed));
     });
   }
+
+  audit(event: string): LogEntry[] {
+    return this.entries().filter((entry) => entry.audit === event);
+  }
+}
+
+// The request id that nestjs-pino binds to every line logged while a request is handled.
+export function loggedRequestId(entry: LogEntry | undefined): unknown {
+  const req = entry?.req;
+  if (typeof req !== 'object' || req === null || !('id' in req)) {
+    return undefined;
+  }
+  return req.id;
 }

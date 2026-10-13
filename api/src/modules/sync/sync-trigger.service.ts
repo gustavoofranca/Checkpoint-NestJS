@@ -2,6 +2,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { ConflictException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { withTimeout } from '../../common/async/with-timeout';
+import { recordAudit } from '../../common/logging/audit-log';
 import { SyncTrigger } from '../../generated/prisma/client';
 import { SYNC_JOB, SYNC_JOB_OPTIONS, SYNC_QUEUE, type SyncJobData } from './sync-queue';
 import { SyncAlreadyRunningError, SyncRunsService } from './sync-runs.service';
@@ -21,7 +22,7 @@ export class SyncTriggerService {
     @InjectQueue(SYNC_QUEUE) private readonly queue: Queue<SyncJobData>,
   ) {}
 
-  async startManual(): Promise<string> {
+  async startManual(adminId: string): Promise<string> {
     let runId: string;
     try {
       runId = await this.runs.start(SyncTrigger.MANUAL);
@@ -43,6 +44,7 @@ export class SyncTriggerService {
       await this.runs.fail(runId, { gamesProcessed: 0, gamesFailed: 0 }, 'Could not be queued.');
       throw new ServiceUnavailableException('The sync queue is unavailable. Try again later.');
     }
+    recordAudit('admin.sync.started', { userId: adminId, runId });
     return runId;
   }
 }
