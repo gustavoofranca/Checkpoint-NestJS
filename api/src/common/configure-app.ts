@@ -1,5 +1,6 @@
 import type { NestApplicationOptions } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { AppConfig } from '../config/app-config';
@@ -21,6 +22,8 @@ export function configureApp(app: NestExpressApplication): void {
   app.useLogger(app.get(Logger));
   app.use(helmet());
   app.enableCors({ origin: [...config.corsOrigins], credentials: true });
+  // Unsigned: the refresh cookie is an opaque random token checked against its stored hash.
+  app.use(cookieParser());
   app.useBodyParser('json', { limit: JSON_BODY_LIMIT });
   app.setGlobalPrefix(API_PREFIX);
   app.useGlobalPipes(createValidationPipe());

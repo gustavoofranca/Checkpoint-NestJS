@@ -30,6 +30,7 @@ export default defineConfig({
           name: 'e2e',
           include: ['test/**/*.e2e-spec.ts'],
           globalSetup: ['test/support/global-setup.ts'],
+          setupFiles: ['test/support/e2e-setup.ts'],
           // e2e files share one database; running them one at a time keeps resets from racing.
           fileParallelism: false,
         },
