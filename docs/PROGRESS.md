@@ -14,6 +14,55 @@ Updated by the agent at the end of every phase. Newest entry first.
 
 ---
 
+### P4 — Reviews, library, profiles — 2026-10-09
+- Status: done
+- Built:
+  - `src/modules/reviews`: `GET /games/:slug/reviews` (newest first, author username, cursor),
+    `PUT` and `DELETE /games/:slug/reviews/me`; each write locks the game row and recomputes
+    `rating_average` and `rating_count` in the same transaction
+  - `src/modules/library`: `GET /me/library` (status filter, most recently changed first, cursor),
+    `PUT` and `DELETE /me/library/:gameId`
+  - `GET /users/:username` in `src/modules/users`: username, join date, review count and the 5
+    latest reviews, from an explicit select (no email, role or id)
+  - Migration with the `(user_id, updated_at, game_id)` index on library entries and
+    `(user_id, created_at)` on reviews
+  - Tests: `authorization.e2e-spec.ts` (every protected route × no, malformed and expired token),
+    `reviews.e2e-spec.ts`, `library.e2e-spec.ts`, `profiles.e2e-spec.ts`
+  - `docs/adr/0006` (denormalized ratings); authorization matrix in `api/test/README.md` complete
+- Decisions not dictated by the spec:
+  - Review writes take `SELECT … FOR UPDATE` on the game row, then recompute the aggregate from
+    all reviews (not deltas). The 20-concurrent-reviews test fails 5 times out of 5 without the
+    lock and passes with it (`docs/adr/0006`)
+  - `PUT /reviews/me` answers 200 for both create and replace, with the review
+  - Review list is newest first by `(created_at, id)`; replacing a review keeps its creation date
+  - Library list is most recently changed first by `(updated_at, game_id)`
+  - Deleting a review the caller does not have, or a game not in the library, answers 404
+  - Unknown game on `PUT /me/library/:gameId` is detected from the foreign key (P2003), not by a
+    read beforehand
+  - A review body is trimmed before validation (10–2000 characters)
+  - Profiles show the 5 latest reviews; the spec does not give a number
+  - Timestamps used in cursors have millisecond precision because Prisma fills them, the same as
+    a JavaScript `Date`; checked on stored rows
+- Dependencies added: none
+- Verification (command → result):
+  - Creates, updates and deletes by three users on two games → stored rating columns equal a fresh
+    `round(avg(rating), 2)` and `count(*)` after every step; the game detail shows the new rating
+  - Two concurrent PUTs by one user → one review; 20 concurrent reviewers on one game → count 20,
+    average 3.00, equal to the fresh aggregate
+  - User A's `DELETE …/reviews/me` and `DELETE /me/library/:gameId` leave user B's rows in place;
+    A's `PUT`s create A's own rows and leave B's unchanged; A's library lists none of B's entries
+  - Every protected route → 401 without a token, with a malformed one and with an expired one
+  - Mass assignment: `userId` in a review or library body → 400
+  - Profile response parsed with a strict schema (any extra field fails) and contains no email
+  - `npm run test:cov` → 266 of 266; lines 98.0%, branches 85.5%; `db:drift` → no difference;
+    lint, format, typecheck, build pass
+- Known limitations / open questions:
+  - Review writes are not rate limited and do not invalidate the catalog cache yet (P5)
+  - Branch coverage is close to the 85% floor; the DTO files count decorator-metadata branches
+    that tests cannot reach
+
+---
+
 ### P3 — Catalog — 2026-10-09
 - Status: done
 - Built:

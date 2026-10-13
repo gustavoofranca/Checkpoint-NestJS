@@ -1,7 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type Role } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { PublicProfileDto } from './dto/public-profile.dto';
 import { USER_RESPONSE_SELECT, type UserResponseDto } from './dto/user-response.dto';
+
+export const PROFILE_REVIEW_COUNT = 5;
 
 // Same message whether the email or the username is taken, so registration does not confirm
 // which one exists (docs/SECURITY.md section 2).
@@ -54,5 +57,36 @@ export class UsersService {
       throw new NotFoundException('Account not found.');
     }
     return user;
+  }
+
+  // An explicit select: the email, role and password hash are never read for a profile.
+  async findPublicProfile(username: string): Promise<PublicProfileDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { username },
+      select: {
+        username: true,
+        createdAt: true,
+        _count: { select: { reviews: true } },
+        reviews: {
+          select: {
+            rating: true,
+            body: true,
+            createdAt: true,
+            game: { select: { slug: true, title: true } },
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: PROFILE_REVIEW_COUNT,
+        },
+      },
+    });
+    if (user === null) {
+      throw new NotFoundException('User not found.');
+    }
+    return {
+      username: user.username,
+      joinedAt: user.createdAt,
+      reviewCount: user._count.reviews,
+      latestReviews: user.reviews,
+    };
   }
 }

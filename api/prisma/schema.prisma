@@ -152,6 +152,8 @@ model Review {
 
   @@unique([userId, gameId])
   @@index([gameId, createdAt])
+  // A profile's latest reviews.
+  @@index([userId, createdAt])
   @@map("reviews")
 }
 
@@ -167,6 +169,8 @@ model LibraryEntry {
 
   @@id([userId, gameId])
   @@index([gameId])
+  // A user's library, most recently changed first, paginated by (updated_at, game_id).
+  @@index([userId, updatedAt, gameId])
   @@map("library_entries")
 }
 

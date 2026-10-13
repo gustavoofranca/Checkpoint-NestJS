@@ -23,22 +23,34 @@
 
 ## Authorization matrix
 
-Required by `docs/SECURITY.md` section 1 for every route that is not public. Each cell names the
-test that proves it, in `test/auth.e2e-spec.ts` unless stated.
+Required by `docs/SECURITY.md` section 1 for every route that is not public.
 
-| Route                | Requires                                 | No credential                                                        | Malformed or expired                                                                                                                                                                | Wrong role                         | Another user                                                             |
-| -------------------- | ---------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------ |
-| `GET /auth/me`       | access token                             | 401: "answers 401 without a token"                                   | 401: the ten cases under "rejects with 401 a token that" (not a JWT, other scheme, expired, other secret, `alg: none`, other algorithm, issuer, audience, unknown role, no subject) | Not applicable: open to every role | Not applicable: the user id comes from the token, never from the request |
-| `POST /auth/refresh` | refresh cookie and allow-listed `Origin` | 401: "answers 401 to a refresh with no cookie"; 403 without `Origin` | 401: unknown, expired, reused or revoked token                                                                                                                                      | Not applicable                     | Not applicable: a token only ever renews its own family                  |
-| `POST /auth/logout`  | allow-listed `Origin`                    | 204 by design: logout is idempotent                                  | 204, nothing to revoke                                                                                                                                                              | Not applicable                     | Not applicable                                                           |
+`test/authorization.e2e-spec.ts` holds one table, `PROTECTED_ROUTES`, with every route that needs
+an access token, and runs three cases against each: no token, a malformed token, an expired
+token, all 401. A new protected route is added to that table and to this one.
 
-The global guard itself is covered with test-only routes (`support/probe.controller.ts`):
-a signed-in USER reaches an authenticated route, gets 403 on an ADMIN route, and reaches it after
-a promotion followed by a refresh; without a token both answer 401.
+| Route                            | Requires                                 | No token / malformed / expired                                                                               | Wrong role                 | Another user                                                                                              |
+| -------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `GET /auth/me`                   | access token                             | 401 (`authorization.e2e-spec.ts`); ten forged-token cases in `auth.e2e-spec.ts`                              | Not applicable: every role | Not applicable: the id comes from the token                                                               |
+| `PUT /games/:slug/reviews/me`    | access token                             | 401 (`authorization.e2e-spec.ts`)                                                                            | Not applicable: every role | "writing "me" creates the caller's own review and leaves the other one unchanged" (`reviews.e2e-spec.ts`) |
+| `DELETE /games/:slug/reviews/me` | access token                             | 401 (`authorization.e2e-spec.ts`)                                                                            | Not applicable: every role | "deleting "me" never removes someone else's review" (`reviews.e2e-spec.ts`)                               |
+| `GET /me/library`                | access token                             | 401 (`authorization.e2e-spec.ts`)                                                                            | Not applicable: every role | "lists only the caller's entries" (`library.e2e-spec.ts`)                                                 |
+| `PUT /me/library/:gameId`        | access token                             | 401 (`authorization.e2e-spec.ts`)                                                                            | Not applicable: every role | "setting a status writes the caller's entry and leaves the other one unchanged" (`library.e2e-spec.ts`)   |
+| `DELETE /me/library/:gameId`     | access token                             | 401 (`authorization.e2e-spec.ts`)                                                                            | Not applicable: every role | "removing a game from "my" library leaves another user's entry in place" (`library.e2e-spec.ts`)          |
+| `POST /auth/refresh`             | refresh cookie and allow-listed `Origin` | 401 without or with an unknown, expired, reused or revoked cookie; 403 without `Origin` (`auth.e2e-spec.ts`) | Not applicable             | Not applicable: a token only renews its own family                                                        |
+| `POST /auth/logout`              | allow-listed `Origin`                    | 204 by design: logout is idempotent; 403 from another origin (`auth.e2e-spec.ts`)                            | Not applicable             | Not applicable                                                                                            |
+
+No route takes a user id or a review id for writing: owned rows are always selected with the
+caller's id from the token in the `WHERE` clause.
+
+Role checks: no route requires ADMIN yet (the admin routes come in P6). The global `RolesGuard`
+is covered with test-only routes (`support/probe.controller.ts`): a USER gets 403 on an ADMIN
+route and reaches it after a promotion followed by a refresh; without a token it answers 401.
 
 ### Public routes
 
 `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` (they act on
 credentials or the cookie, not on an access token), `GET /games`, `GET /games/:slug`,
-`GET /genres` (the catalog is readable by anyone), `GET /health/live`, `GET /health/ready`,
-and `GET /docs` with `/docs/openapi.json` (off in production unless `ENABLE_DOCS=true`).
+`GET /games/:slug/reviews`, `GET /genres`, `GET /users/:username` (catalog, reviews and profiles
+are readable by anyone), `GET /health/live`, `GET /health/ready`, and `GET /docs` with
+`/docs/openapi.json` (off in production unless `ENABLE_DOCS=true`).
