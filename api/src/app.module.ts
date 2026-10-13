@@ -9,6 +9,8 @@ import { HealthModule } from './modules/health/health.module';
 import { LibraryModule } from './modules/library/library.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { UsersModule } from './modules/users/users.module';
+import { BullRootModule } from './modules/sync/bull-root.module';
+import { SyncModule } from './modules/sync/sync.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 
 @Module({})
@@ -26,6 +28,8 @@ export class AppModule {
         ReviewsModule,
         LibraryModule,
         UsersModule,
+        BullRootModule,
+        SyncModule,
         HealthModule,
       ],
     };
