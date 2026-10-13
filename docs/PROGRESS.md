@@ -14,6 +14,66 @@ Updated by the agent at the end of every phase. Newest entry first.
 
 ---
 
+### P3 — Catalog — 2026-10-09
+- Status: done
+- Built:
+  - `src/modules/games`: `GET /games` (title search, genre filter, `newest` / `top_rated` /
+    `title` sorts), `GET /games/:slug` (genres, price, rating summary), `GET /genres` (with game
+    counts); response DTOs built from explicit selects
+  - `src/common/pagination`: cursor encode and decode with schema validation, `toPage`,
+    `PaginationQueryDto` (limit 1–50, default 20)
+  - `src/common/openapi`: Swagger UI at `/api/v1/docs` and `/api/v1/docs/openapi.json`, off in
+    production unless `ENABLE_DOCS=true`; Problem Details documented as
+    `application/problem+json`. Every route so far (auth, catalog, health) has a summary, tag,
+    request and response DTOs and its error statuses.
+  - Migrations: `title_sort` column with its index (backfills existing rows), then the `"C"`
+    collation on it
+  - `docs/adr/0005` (cursor pagination), `docs/query-plans/catalog.md` (EXPLAIN of each query)
+  - Tests: `test/games.e2e-spec.ts` (30), pagination and text unit tests; a query-counting
+    Prisma client for the bounded-queries test
+- Decisions not dictated by the spec:
+  - Default sort `newest`. Games without a release date come first under `newest`: that order
+    is a backward scan of the existing index, and announced games at the top of "newest" suit a
+    catalog (`docs/adr/0005`)
+  - Title sort uses an application-computed key with byte collation, because the database locale
+    made the order depend on the image (Alpine sorted "ARK" before "Age")
+  - Cursor conditions carry a redundant bound on the sort key so PostgreSQL starts the index scan
+    at the cursor; without it a deep page would scan from the start (seen while designing, proven
+    by the plans)
+  - Cursors are base64url JSON, unsigned, and carry the sort; one from another sort is a 400
+  - `GET /genres` returns `{ data }` without a cursor, capped at 100: Steam's genre taxonomy is a
+    few dozen entries. This is the one list without pagination.
+  - Unknown query parameters (an `offset`, for instance) are rejected with 400 by the global
+    whitelist
+  - Response shape: `rating: { average, count }`, `price: { amountCents, currency } | null`,
+    `releaseDate` as `YYYY-MM-DD`
+  - OpenAPI annotations were added to the P2 auth and P0 health routes too, so the document
+    is complete; response interfaces became DTO classes for it
+- Dependencies added (name@version): @nestjs/swagger@12.0.2
+- Verification (command → result):
+  - Paging through the whole seed with `limit=7` → every game once and in the order computed
+    independently in the test, for each sort and for one genre
+  - Invalid cursor, cursor of another sort, `limit=0`, `limit=51`, one-character `q`, unknown
+    sort, `offset` → 400 Problem Details
+  - `q` with `%`, `_` or a quote matches literally and does not error
+  - `GET /games` with `limit=5` and `limit=50` → 3 SQL statements each (games, genre links,
+    genres)
+  - EXPLAIN of the exact SQL Prisma sends → index scans for every sort, with `Index Cond` on the
+    key after a cursor; the search uses the trigram index once sequential scans are not cheaper
+    (`docs/query-plans/catalog.md`)
+  - `/api/v1/docs/openapi.json` → 200 in test, 404 in production, 200 in production with
+    `ENABLE_DOCS=true`; Swagger UI uses no inline script, so helmet's CSP stays strict
+  - `npm run test:cov` → 215 of 215; lines 97.9%, branches 87.5%; `db:drift` → no difference;
+    lint, format, typecheck, build pass; `npm audit --omit=dev` → 0
+- Known limitations / open questions:
+  - Existing databases got `title_sort = lower(title)` from the migration; `npm run db:seed`
+    writes the exact key (accents and trademark signs removed)
+  - Search is a substring filter, not a ranked search; results follow the chosen sort
+  - Catalog reads are not cached yet (P5)
+  - The committed `openapi.json` and its CI drift check come in P8
+
+---
+
 ### P2 — Authentication — 2026-10-09
 - Status: done
 - Built:

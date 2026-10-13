@@ -84,6 +84,9 @@ model Game {
   steamAppId       Int       @unique @map("steam_app_id")
   slug             String    @unique @db.VarChar(120)
   title            String    @db.VarChar(200)
+  // Application-computed key for the title sort: lowercase, accents and trademark signs removed.
+  // Sorting by it does not depend on the database locale (docs/adr/0005).
+  titleSort        String    @map("title_sort") @db.VarChar(200)
   shortDescription String    @map("short_description") @db.VarChar(1000)
   headerImageUrl   String    @map("header_image_url") @db.VarChar(500)
   releaseDate      DateTime? @map("release_date") @db.Date
@@ -107,7 +110,7 @@ model Game {
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "games_title_trgm_idx")
   @@index([releaseDate, id])
   @@index([ratingAverage, id])
-  @@index([title, id])
+  @@index([titleSort, id])
   @@map("games")
 }
 

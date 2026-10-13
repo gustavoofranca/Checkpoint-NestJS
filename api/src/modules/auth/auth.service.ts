@@ -1,10 +1,10 @@
 import { randomBytes } from 'node:crypto';
 import { Injectable, type OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../common/auth/authenticated-user';
-import type { UserResponse } from '../users/dto/user-response.dto';
+import type { UserResponseDto } from '../users/dto/user-response.dto';
 import { PasswordHasher } from '../users/password-hasher';
 import { UsersService } from '../users/users.service';
-import type { AccessTokenResponse } from './dto/access-token-response.dto';
+import type { AccessTokenResponseDto } from './dto/access-token-response.dto';
 import type { LoginDto } from './dto/login.dto';
 import type { RegisterDto } from './dto/register.dto';
 import { ACCESS_TOKEN_TTL_SECONDS, AccessTokenService } from './tokens/access-token.service';
@@ -14,7 +14,7 @@ export const INVALID_CREDENTIALS = 'Invalid email or password.';
 export const INVALID_SESSION = 'The session is invalid or has expired. Sign in again.';
 
 export interface Session {
-  body: AccessTokenResponse;
+  body: AccessTokenResponseDto;
   refreshToken: IssuedRefreshToken;
 }
 
@@ -36,7 +36,7 @@ export class AuthService implements OnModuleInit {
   }
 
   // Hashing happens before the insert, so a taken email costs the same time as a new one.
-  async register(dto: RegisterDto): Promise<UserResponse> {
+  async register(dto: RegisterDto): Promise<UserResponseDto> {
     const passwordHash = await this.hasher.hash(dto.password);
     return this.users.create({ email: dto.email, username: dto.username, passwordHash });
   }

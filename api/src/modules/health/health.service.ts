@@ -2,7 +2,8 @@ import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs
 import { Redis } from 'ioredis';
 import { PrismaService } from '../../prisma/prisma.service';
 import { REDIS_CLIENT } from '../../redis/redis.constants';
-import type { DependencyStatus, ReadinessResponse } from './dto/health-response.dto';
+import type { DependencyStatus } from './dto/dependency-checks.dto';
+import type { ReadinessResponseDto } from './dto/readiness-response.dto';
 
 // A readiness probe must answer quickly even when a dependency hangs instead of refusing.
 const PROBE_TIMEOUT_MS = 1_000;
@@ -16,7 +17,7 @@ export class HealthService {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
-  async ensureReady(): Promise<ReadinessResponse> {
+  async ensureReady(): Promise<ReadinessResponseDto> {
     const [database, redis] = await Promise.all([
       this.probe('database', () => this.prisma.$queryRaw`SELECT 1`),
       this.probe('redis', () => this.redis.ping()),

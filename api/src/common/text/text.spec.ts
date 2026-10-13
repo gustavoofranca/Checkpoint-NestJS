@@ -1,6 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { slugify } from './slugify';
 import { stripHtml } from './strip-html';
+import { titleSortKey } from './title-sort-key';
+
+describe('titleSortKey', () => {
+  it('ignores case, accents and trademark signs', () => {
+    expect(titleSortKey('ARMORED CORE™ VI')).toBe('armored core vi');
+    expect(titleSortKey('Pokémon® Café')).toBe('pokemon cafe');
+  });
+
+  it('orders titles the way a reader expects', () => {
+    const titles = ['ARK: Survival Ascended', 'Age of Empires IV', 'among us', 'Ägypten'];
+
+    expect([...titles].sort((a, b) => (titleSortKey(a) < titleSortKey(b) ? -1 : 1))).toEqual([
+      'Age of Empires IV',
+      'Ägypten',
+      'among us',
+      'ARK: Survival Ascended',
+    ]);
+  });
+
+  it('collapses whitespace and caps the length', () => {
+    expect(titleSortKey('  Half   Life  ')).toBe('half life');
+    expect(titleSortKey('x'.repeat(300))).toHaveLength(200);
+  });
+});
 
 describe('stripHtml', () => {
   it('removes tags and collapses the whitespace they leave', () => {

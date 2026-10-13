@@ -1,3 +1,4 @@
+import { titleSortKey } from '../../src/common/text/title-sort-key';
 import { Prisma, type PrismaClient } from '../../src/generated/prisma/client';
 import { createPrismaClient } from '../../src/prisma/create-prisma-client';
 import { liveDependencies } from './test-config';
@@ -47,11 +48,13 @@ export async function createGame(
   overrides: Partial<Prisma.GameCreateInput> = {},
 ): Promise<{ id: string }> {
   const n = next();
+  const title = overrides.title ?? `Test Game ${String(n)}`;
   return prisma.game.create({
     data: {
       steamAppId: 900_000 + n,
       slug: `test-game-${String(n)}`,
-      title: `Test Game ${String(n)}`,
+      title,
+      titleSort: titleSortKey(title),
       shortDescription: 'A game created by a test.',
       headerImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${String(n)}/header.jpg`,
       developers: ['Test Studio'],

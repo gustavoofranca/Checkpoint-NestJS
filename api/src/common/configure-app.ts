@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { AppConfig } from '../config/app-config';
+import { setupOpenApi } from './openapi/setup-openapi';
 import { ProblemDetailsFilter } from './problem-details/problem-details.filter';
 import { assignRequestId } from './request-id.middleware';
 import { createValidationPipe } from './validation/create-validation-pipe';
@@ -29,4 +30,5 @@ export function configureApp(app: NestExpressApplication): void {
   app.useGlobalPipes(createValidationPipe());
   app.useGlobalFilters(new ProblemDetailsFilter());
   app.enableShutdownHooks();
+  setupOpenApi(app);
 }
