@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module';
 import { APP_OPTIONS, configureApp } from '../../src/common/configure-app';
 import type { AppConfig } from '../../src/config/app-config';
+import type { DestinationStream } from 'pino';
 import type { PrismaClient } from '../../src/generated/prisma/client';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { recordLeakingResponses } from './response-leak-guard';
@@ -15,11 +16,13 @@ interface TestAppOptions {
   controllers?: Type[];
   // A real client to use instead of PrismaService, for instance one that counts queries.
   prisma?: PrismaClient<'query'>;
+  // Receives every log line, for tests that check what is logged.
+  logDestination?: DestinationStream;
 }
 
 export async function createTestApp(options: TestAppOptions = {}): Promise<NestExpressApplication> {
   const builder = Test.createTestingModule({
-    imports: [AppModule.forRoot(options.config ?? testConfig())],
+    imports: [AppModule.forRoot(options.config ?? testConfig(), options.logDestination)],
     controllers: options.controllers ?? [],
   });
   if (options.prisma !== undefined) {
