@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { Redis } from 'ioredis';
+import { withTimeout } from '../../common/async/with-timeout';
 import { PrismaService } from '../../prisma/prisma.service';
 import { REDIS_CLIENT } from '../../redis/redis.constants';
 import type { DependencyStatus } from './dto/dependency-checks.dto';
@@ -42,19 +43,5 @@ export class HealthService {
       this.logger.warn(`Readiness probe for ${name} failed: ${reason}`);
       return 'down';
     }
-  }
-}
-
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
-      reject(new Error(`timed out after ${String(timeoutMs)} ms`));
-    }, timeoutMs);
-  });
-  try {
-    return await Promise.race([promise, timeout]);
-  } finally {
-    clearTimeout(timer);
   }
 }
