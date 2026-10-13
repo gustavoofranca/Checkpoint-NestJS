@@ -12,6 +12,9 @@
 - e2e tests use the database named in `DATABASE_URL` with `_test` appended
   (`checkpoint_test`). `support/global-setup.ts` creates it when missing and applies the
   migrations; the development database is never touched.
+- Likewise, Redis is used through logical database 1 (development uses 0).
+  `support/e2e-setup.ts` empties it before every e2e test, so rate-limit counters and cache
+  entries never carry over from one test to the next; it refuses to flush any other database.
 - Each e2e file resets the tables it uses (`support/database.ts`). Files run one at a time;
   tests inside a file do not depend on order.
 - `support/create-test-app.ts` builds the application with the same `configureApp` as
