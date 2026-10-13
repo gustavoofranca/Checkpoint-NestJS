@@ -21,6 +21,9 @@ export const envSchema = z.object({
     .pipe(z.array(origin).min(1)),
   DATABASE_URL: databaseUrl,
   REDIS_URL: z.url({ protocol: /^rediss?$/ }),
+  // Proxies between the client and the API whose X-Forwarded-For is trusted. 0: none, so the
+  // client IP used for rate limiting is the socket address and cannot be spoofed by a header.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
   // Swagger UI is always on outside production; in production only when this is "true".
   ENABLE_DOCS: z.enum(['true', 'false']).default('false'),
   JWT_SECRET: z
