@@ -5,6 +5,7 @@ import { type Page, toPage } from '../../common/pagination/page';
 import type { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GamesService } from '../games/games.service';
 import type { ReviewDto } from './dto/review.dto';
 import type { UpsertReviewDto } from './dto/upsert-review.dto';
 
@@ -38,7 +39,10 @@ type Tx = Prisma.TransactionClient;
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly games: GamesService,
+  ) {}
 
   async listForGame(slug: string, query: PaginationQueryDto): Promise<Page<ReviewDto>> {
     const game = await this.prisma.game.findUnique({ where: { slug }, select: { id: true } });
@@ -71,8 +75,8 @@ export class ReviewsService {
 
   // Creates or replaces the caller's review. The author is always the caller: there is no way to
   // address another user's review.
-  upsertOwn(userId: string, slug: string, dto: UpsertReviewDto): Promise<ReviewDto> {
-    return this.prisma.$transaction(async (tx) => {
+  async upsertOwn(userId: string, slug: string, dto: UpsertReviewDto): Promise<ReviewDto> {
+    const review = await this.prisma.$transaction(async (tx) => {
       const gameId = await lockGame(tx, slug);
       const review = await tx.review.upsert({
         where: { userId_gameId: { userId, gameId } },
@@ -83,6 +87,9 @@ export class ReviewsService {
       await refreshRating(tx, gameId);
       return toReviewDto(review);
     });
+    // After the commit, so no reader can cache the old rating under the new cache version.
+    await this.games.invalidateCatalog();
+    return review;
   }
 
   async deleteOwn(userId: string, slug: string): Promise<void> {
@@ -94,6 +101,7 @@ export class ReviewsService {
       }
       await refreshRating(tx, gameId);
     });
+    await this.games.invalidateCatalog();
   }
 }
 
