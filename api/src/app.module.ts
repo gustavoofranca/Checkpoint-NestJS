@@ -6,6 +6,9 @@ import { ConfigModule } from './config/config.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { GamesModule } from './modules/games/games.module';
 import { HealthModule } from './modules/health/health.module';
+import { LibraryModule } from './modules/library/library.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({})
 export class AppModule {
@@ -17,6 +20,9 @@ export class AppModule {
         LoggerModule.forRoot(createLoggerParams(config)),
         AuthModule,
         GamesModule,
+        ReviewsModule,
+        LibraryModule,
+        UsersModule,
         HealthModule,
       ],
     };
