@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
+import { reportError } from '../../common/error-reporting/sentry';
 import { SyncTrigger } from '../../generated/prisma/client';
 import { SYNC_QUEUE, type SyncJobData } from './sync-queue';
 import { SyncRunner } from './sync-runner.service';
@@ -30,6 +31,14 @@ export class SyncProcessor extends WorkerHost {
       return;
     }
     await this.runner.run(runId);
+  }
+
+  // A job fails only on an error the runner could not handle; the run itself is already FAILED.
+  @OnWorkerEvent('failed')
+  onFailed(job: Job<SyncJobData> | undefined, error: Error): void {
+    const jobId = job?.id ?? 'unknown';
+    this.logger.error({ err: error, jobId }, 'Sync job failed');
+    reportError(error, { tags: { queue: SYNC_QUEUE, job_id: jobId } });
   }
 
   private async startScheduledRun(): Promise<string | undefined> {

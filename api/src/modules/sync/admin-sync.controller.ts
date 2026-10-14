@@ -6,7 +6,8 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { Roles } from '../../common/auth/auth.decorators';
+import { CurrentUser, Roles } from '../../common/auth/auth.decorators';
+import type { AuthenticatedUser } from '../../common/auth/authenticated-user';
 import { ApiProblemResponses } from '../../common/openapi/api-problem-responses.decorator';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { Role } from '../../generated/prisma/client';
@@ -34,8 +35,8 @@ export class AdminSyncController {
   })
   @ApiAcceptedResponse({ type: SyncStartedDto })
   @ApiProblemResponses(401, 403, 409, 503)
-  async start(): Promise<SyncStartedDto> {
-    return { runId: await this.trigger.startManual() };
+  async start(@CurrentUser() admin: AuthenticatedUser): Promise<SyncStartedDto> {
+    return { runId: await this.trigger.startManual(admin.id) };
   }
 
   @Get('runs')

@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { AppConfig } from '../config/app-config';
+import { MetricsService } from '../modules/metrics/metrics.service';
 import { setupOpenApi } from './openapi/setup-openapi';
 import { ProblemDetailsFilter } from './problem-details/problem-details.filter';
 import { assignRequestId } from './request-id.middleware';
@@ -22,6 +23,7 @@ export function configureApp(app: NestExpressApplication): void {
   // Express derives request.ip, which the rate limiter keys on, from this setting.
   app.set('trust proxy', config.trustProxyHops);
   app.use(assignRequestId);
+  app.use(app.get(MetricsService).observeHttpRequest);
   app.useLogger(app.get(Logger));
   app.use(helmet());
   app.enableCors({ origin: [...config.corsOrigins], credentials: true });

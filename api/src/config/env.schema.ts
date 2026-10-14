@@ -11,6 +11,13 @@ const origin = z
 
 export const databaseUrl = z.url({ protocol: /^postgres(ql)?$/ });
 
+// An empty value ("NAME=" in .env) means unset, like a missing variable.
+function optional<T extends z.ZodType>(schema: T) {
+  return z.preprocess((value) => (value === '' ? undefined : value), schema.optional());
+}
+
+const MIN_METRICS_TOKEN_LENGTH = 32;
+
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
@@ -26,6 +33,10 @@ export const envSchema = z.object({
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
   // Swagger UI is always on outside production; in production only when this is "true".
   ENABLE_DOCS: z.enum(['true', 'false']).default('false'),
+  // Bearer token Prometheus sends to /metrics. Unset: the endpoint answers 404.
+  METRICS_TOKEN: optional(z.string().min(MIN_METRICS_TOKEN_LENGTH)),
+  // Error reporting to Sentry. Unset: nothing is sent and the SDK is not initialized.
+  SENTRY_DSN: optional(z.url({ protocol: /^https?$/ })),
   JWT_SECRET: z
     .string()
     .refine((value) => Buffer.byteLength(value, 'utf8') >= MIN_JWT_SECRET_BYTES, {

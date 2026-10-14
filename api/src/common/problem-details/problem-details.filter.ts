@@ -1,5 +1,6 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { reportError } from '../error-reporting/sentry';
 import { isExpectedError, toProblemDetails } from './problem-details';
 
 @Catch()
@@ -17,6 +18,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     }
 
     const problem = toProblemDetails(exception, requestId);
+    if (problem.status >= 500) {
+      reportError(exception, { requestId, userId: request.user?.id });
+    }
     response.status(problem.status).type('application/problem+json').json(problem);
   }
 }

@@ -14,6 +14,69 @@ Updated by the agent at the end of every phase. Newest entry first.
 
 ---
 
+### P7 — Observability — 2026-10-14
+- Status: done
+- Built:
+  - `GET /api/v1/metrics` (`src/modules/metrics`): HTTP duration histogram by method, route
+    pattern and status; cache hit and miss counters; finished sync runs by outcome, sync in
+    progress, last run duration and last success time, read from `sync_runs` at scrape time;
+    sync queue depth by state; `checkpoint_metrics_source_up` for PostgreSQL and Redis; default
+    process metrics. Protected by `METRICS_TOKEN` (`MetricsTokenGuard`); 404 when it is unset
+  - Sentry (`src/common/error-reporting/sentry.ts`), only when `SENTRY_DSN` is set: 5xx responses
+    tagged with the request id and user id, and failed sync jobs; every data collection category
+    off and a `beforeSend` scrubber
+  - Audit events (`src/common/logging/audit-log.ts`): register, login success and failure,
+    refresh token reuse, logout, admin starting a sync; ids only, request id from the
+    request-bound logger
+  - Request log line: route pattern and user id added
+  - Fix: unexpected errors were logged as "non-Error value thrown" without message or stack,
+    because pino-http wraps custom serializers; the serializers now run unwrapped
+  - Optional `METRICS_TOKEN` and `SENTRY_DSN` in the environment schema and `.env.example`
+  - Tests: `logging.e2e-spec.ts`, `metrics.e2e-spec.ts`, `error-reporting.e2e-spec.ts` (real
+    Sentry SDK with a recording transport), a failing sync job through the queue
+  - `docs/adr/0011` (metrics, error reporting and audit)
+- Decisions not dictated by the spec:
+  - Sync metrics come from the database at scrape time: the worker serves no HTTP and the table
+    already holds every run
+  - `/metrics` accepts only `METRICS_TOKEN`, compared in constant time; user tokens, admin
+    included, are refused
+  - A source that cannot answer during a scrape is reported by
+    `checkpoint_metrics_source_up{source}` = 0 and its series are skipped; the scrape still
+    succeeds
+  - Sentry's defaults send bodies, cookies, headers, query strings and stack frame variables;
+    all are switched off, with a scrubber as a second layer. No tracing
+  - 5xx responses are reported, including expected ones such as a 503 from an unavailable
+    queue; 4xx are not
+  - Audit events are log lines, not a table; a failed login carries the user id only when the
+    email matched an account
+  - `@prometheus-io/client` instead of `prom-client`: the latter was deprecated in favour of the
+    former, which is the same library under the Prometheus organisation
+- Dependencies added (name@version): @prometheus-io/client@0.16.1, @sentry/node@11.7.0
+- Verification (command → result):
+  - `/metrics` → 401 without a token, with a wrong one and with a user access token; 200 Prometheus
+    text with `METRICS_TOKEN`; 404 without `METRICS_TOKEN`: `test/metrics.e2e-spec.ts`
+  - Forced 500 → the log line carries the request id of the response, the error message and
+    stack; the response carries the same id and nothing internal: `test/logging.e2e-spec.ts`
+  - A whole session (register, login, `/auth/me`, refresh, logout) → no password, access token,
+    refresh cookie or email in the logs: `test/logging.e2e-spec.ts`
+  - Every test runs with `SENTRY_DSN` unset; `initSentry` without a DSN leaves the SDK
+    uninitialized
+  - Sentry event for a 500 → tagged with the request id; no body, query string, cookie or custom
+    header value reaches the transport. With both protections removed the same test fails
+    (negative control)
+  - PostgreSQL and Redis unreachable → `/metrics` answers within 3 s with both sources at 0
+  - `npm run test:cov` → 373 of 373; lines 98.2%, branches 86.3%; lint, format, typecheck, build
+    pass; `db:drift` → no difference; `npm audit --omit=dev --audit-level=high` → 0
+- Known limitations / open questions:
+  - Without labels, a gauge always reports a value: `checkpoint_sync_running` reads 0 while its
+    source is down, and `checkpoint_sync_last_success_timestamp_seconds` is 0 before the first
+    success. `checkpoint_metrics_source_up` tells the cases apart
+  - Unknown paths are labelled with Nest's catch-all route (`/api/v1*path`)
+  - The worker exposes no metrics of its own; its runs are visible through the table
+  - Prometheus and Sentry themselves are not part of the Compose stack
+
+---
+
 ### P6 — Catalog sync — 2026-10-13
 - Status: done
 - Built:

@@ -30,6 +30,12 @@ export class ProbeController {
     throw new Error('relation "users" does not exist at /srv/app/dist/users.repository.js:42');
   }
 
+  // The body is parsed before the handler runs, so error reports can be checked for it.
+  @Post('crash')
+  crashWithBody(): never {
+    throw new Error('Unexpected failure after reading the request body');
+  }
+
   // Lets the suite check that its response guard catches a leaked hash.
   @Get('leak')
   leak(): { passwordHash: string } {

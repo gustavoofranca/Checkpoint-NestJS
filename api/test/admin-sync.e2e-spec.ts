@@ -279,6 +279,25 @@ describe('sync jobs and an unavailable queue', () => {
     await down.close();
   }, 15_000);
 
+  it('fails the job, with the run already FAILED, when the runner hits an unexpected error', async () => {
+    worker = await createTestWorker({
+      steamBaseUrl: await steam.start(),
+      appIds: [],
+      loadAppIds: () => Promise.reject(new Error('app id list unreadable')),
+    });
+    const queue = worker.get<Queue>(getQueueToken(SYNC_QUEUE), { strict: false });
+
+    const job = await queue.add(SYNC_JOB, {});
+
+    await waitUntil(async () => (await job.getState()) === 'failed');
+    expect((await queue.getJob(job.id ?? ''))?.failedReason).toBe('app id list unreadable');
+    expect(await prisma.syncRun.findFirstOrThrow()).toMatchObject({
+      trigger: SyncTrigger.SCHEDULED,
+      status: SyncStatus.FAILED,
+      errorMessage: 'app id list unreadable',
+    });
+  });
+
   it('runs a scheduled job: it creates its own SCHEDULED run', async () => {
     steam.on(811, { kind: 'game', data: steamGame(811) });
     worker = await createTestWorker({ steamBaseUrl: await steam.start(), appIds: [811] });
