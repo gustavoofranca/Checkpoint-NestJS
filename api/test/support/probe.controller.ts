@@ -4,7 +4,7 @@ import { CurrentUser, Public, Roles } from '../../src/common/auth/auth.decorator
 import type { AuthenticatedUser } from '../../src/common/auth/authenticated-user';
 import { Role } from '../../src/generated/prisma/client';
 
-export class ProbeDto {
+class ProbeDto {
   @IsString()
   @Length(1, 20)
   name!: string;

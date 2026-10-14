@@ -5,7 +5,7 @@ import { AppConfig } from '../../config/app-config';
 import { REFRESH_COOKIE } from '../../modules/auth/refresh-cookie';
 import { METRICS_AUTH } from '../../modules/metrics/metrics.controller';
 
-export const DOCS_PATH = 'api/v1/docs';
+const DOCS_PATH = 'api/v1/docs';
 
 // Committed beside package.json; resolved from src/common/openapi or dist/common/openapi.
 export const OPENAPI_FILE = join(__dirname, '..', '..', '..', 'openapi.json');

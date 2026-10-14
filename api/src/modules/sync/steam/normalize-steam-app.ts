@@ -5,7 +5,7 @@ import { type SteamAppData, steamAppDataSchema } from './steam-app-details.schem
 
 // Exact hosts of Steam's image CDN. A suffix match would also accept any subdomain someone
 // manages to get under these domains.
-export const STEAM_IMAGE_HOSTS: ReadonlySet<string> = new Set([
+const STEAM_IMAGE_HOSTS: ReadonlySet<string> = new Set([
   'shared.akamai.steamstatic.com',
   'shared.fastly.steamstatic.com',
   'shared.cloudflare.steamstatic.com',

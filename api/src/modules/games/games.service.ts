@@ -21,7 +21,7 @@ import { afterCursor, cursorOf, decodeGameCursor, GAME_ORDER_BY } from './game-s
 export const GENRE_LIMIT = 100;
 
 // Invalidated by catalog sync (P6) and by every review write, which changes ratings.
-export const CATALOG_CACHE = 'games';
+const CATALOG_CACHE = 'games';
 const LIST_TTL_SECONDS = 5 * 60;
 const DETAIL_TTL_SECONDS = 10 * 60;
 const GENRES_TTL_SECONDS = 5 * 60;

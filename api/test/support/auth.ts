@@ -5,7 +5,7 @@ import { REFRESH_COOKIE } from '../../src/modules/auth/refresh-cookie';
 import { JWT_AUDIENCE, JWT_ISSUER } from '../../src/modules/auth/tokens/access-token.service';
 import { ALLOWED_ORIGIN } from './test-config';
 
-export const PASSWORD = 'correct horse battery staple';
+const PASSWORD = 'correct horse battery staple';
 
 let sequence = 0;
 
