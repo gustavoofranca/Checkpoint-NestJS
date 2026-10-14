@@ -1,0 +1,8 @@
+# Only package files, prisma/, src/ and the build configs are copied into the image.
+node_modules
+dist
+coverage
+src/generated
+test
+**/*.spec.ts
+.env

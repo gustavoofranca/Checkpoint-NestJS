@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 
-export const REQUEST_ID_HEADER = 'X-Request-Id';
+const REQUEST_ID_HEADER = 'X-Request-Id';
 
 // Registered first, so requests rejected before routing (body too large, malformed JSON) still
 // carry an id. The id is always generated here: a client-supplied one would let callers forge

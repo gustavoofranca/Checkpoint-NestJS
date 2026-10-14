@@ -4,7 +4,7 @@ import { type AppConfig, loadConfig } from '../../src/config/app-config';
 export const ALLOWED_ORIGIN = 'http://localhost:5173';
 
 // Nothing listens on port 1, so connections are refused immediately.
-export const UNREACHABLE_DATABASE_URL = 'postgresql://checkpoint:unused@127.0.0.1:1/checkpoint';
+const UNREACHABLE_DATABASE_URL = 'postgresql://checkpoint:unused@127.0.0.1:1/checkpoint';
 export const UNREACHABLE_REDIS_URL = 'redis://127.0.0.1:1';
 
 // A valid environment for tests. Dependencies are unreachable unless a test overrides them.

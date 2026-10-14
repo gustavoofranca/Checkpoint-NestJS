@@ -6,7 +6,7 @@ import type { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 const REFRESH_TOKEN_BYTES = 32;
-export const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export interface IssuedRefreshToken {
   // Sent to the client once, in the cookie. Only its SHA-256 is stored.

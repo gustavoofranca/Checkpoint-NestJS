@@ -1,0 +1,101 @@
+# Production stack: the API, the worker, PostgreSQL and Redis, built from api/Dockerfile.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# Every variable is listed in .env.example. Generate passwords with `openssl rand -hex 32`: they
+# are placed in connection URLs, so they must not contain URL syntax characters.
+#
+# PostgreSQL and Redis publish no ports. The API listens on 127.0.0.1 only, for a reverse proxy
+# that terminates TLS in front of it (TRUST_PROXY_HOPS=1). The API and the worker connect to
+# PostgreSQL as APP_DB_USER, which cannot change the schema; only the one-shot migrate service
+# uses the owner role (deploy/postgres/10-app-role.sh).
+name: checkpoint-prod
+
+x-app: &app
+  image: checkpoint-api
+  build:
+    context: ./api
+    target: runtime
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: ['no-new-privileges:true']
+  cap_drop: [ALL]
+  environment:
+    NODE_ENV: production
+    LOG_LEVEL: ${LOG_LEVEL:-info}
+    CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS}
+    TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
+    ENABLE_DOCS: ${ENABLE_DOCS:-false}
+    DATABASE_URL: postgresql://${APP_DB_USER:?set APP_DB_USER}:${APP_DB_PASSWORD:?set APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}
+    REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379
+    JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+    METRICS_TOKEN: ${METRICS_TOKEN:-}
+    SENTRY_DSN: ${SENTRY_DSN:-}
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+    redis:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+      APP_DB_USER: ${APP_DB_USER:?set APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./deploy/postgres/10-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
+    restart: unless-stopped
+    command: ['redis-server', '--requirepass', '${REDIS_PASSWORD:?set REDIS_PASSWORD}']
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Applies pending migrations as the schema owner, then exits. The API and the worker wait for it.
+  migrate:
+    image: checkpoint-migrate
+    build:
+      context: ./api
+      target: migrate
+    restart: 'no'
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *app
+    ports:
+      - '127.0.0.1:${API_PORT:-3000}:3000'
+
+  worker:
+    <<: *app
+    command: ['node', 'dist/worker.js']
+    # No HTTP server in the worker: the image's health check does not apply.
+    healthcheck:
+      disable: true
+
+volumes:
+  postgres-data:
+  redis-data:

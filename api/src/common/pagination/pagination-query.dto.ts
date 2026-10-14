@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 
-export const MAX_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 50;
 
 // Every list endpoint takes these two parameters; there is no offset and no total count.
 export class PaginationQueryDto {

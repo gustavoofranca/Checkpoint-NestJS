@@ -14,6 +14,68 @@ Updated by the agent at the end of every phase. Newest entry first.
 
 ---
 
+### P8 — Hardening and review — 2026-10-14
+- Status: done, except "CI fully green": the branch is not pushed yet
+- Built:
+  - `docs/SECURITY-REVIEW.md`: every rule of `docs/SECURITY.md` and `docs/AI-PITFALLS.md` with the
+    file that enforces it and the test or check that proves it
+  - `api/Dockerfile`: multi-stage, base image pinned by digest; `runtime` target runs as `node`
+    with production dependencies only and no source maps (670 MB); `migrate` target for
+    `prisma migrate deploy`. `api/.dockerignore`
+  - `docker-compose.prod.yml`: PostgreSQL and Redis without published ports, read-only
+    containers with all capabilities dropped, a one-shot `migrate` service, the API on
+    127.0.0.1 only. `deploy/postgres/10-app-role.sh` creates the role the API and worker use,
+    which cannot change the schema
+  - CI: `npm audit --omit=dev --audit-level=high`, gitleaks over the full history, a production
+    image job (non-root, no development packages, no source maps, no sources or `.env`), CodeQL
+    (`codeql.yml`) and Dependabot (`dependabot.yml`)
+  - `api/openapi.json` committed, written by `npm run openapi:export` (Nest preview mode, no
+    connections); `openapi.e2e-spec.ts` fails while it differs from the served document
+  - `load/catalog.js` (k6) and `load/run.sh`
+  - Fixes from the review: server header and request timeouts (10 s, 30 s); unhandled
+    unique-constraint errors answer 409 instead of 500; Prisma's import extension pinned to
+    `.js` (the Docker build produced a client that could not load)
+  - New checks: the authorization matrix against the OpenAPI document; `.env.example` against
+    the variables read by the code and the compose files; exact npm versions; Actions pinned
+    to SHAs (`test/repository-rules.spec.ts`)
+  - Constants exported but used only in their own module made private
+- Decisions not dictated by the spec:
+  - k6 run from its Docker image instead of autocannon from npm: no new dependency
+  - The uncached load scenario requests every URL exactly once right after the cache version is
+    bumped; the cached one then replays them at 200 requests a second. Random `X-Forwarded-For`
+    with `TRUST_PROXY_HOPS=1` keeps the per-IP limit from throttling a single-machine test
+  - The runtime image installs with `--omit=dev --omit=optional`: `prisma` and `typescript` are
+    optional peers of production packages and survive a plain `--omit=dev`; the optional
+    packages left out (msgpackr-extract, pg-cloudflare, oxc-parser bindings) are not used here
+  - Migrations run as the database owner from a separate image; the API and worker connect as
+    `APP_DB_USER`
+  - The OpenAPI drift check is an e2e test rather than a separate CI step, so it also runs locally
+- Dependencies added (name@version): none. Tools pinned by digest outside npm: grafana/k6:2.3.0,
+  ghcr.io/gitleaks/gitleaks:v8.30.1; GitHub Action github/codeql-action v4.38.3
+- Verification (command → result):
+  - `npm run test:cov` → 381 of 381; lines 98.2%, branches 86.3%; lint, format, typecheck,
+    build pass; `db:drift` → no difference; `npm audit --omit=dev --audit-level=high` → 0
+  - `docker build api` → runtime image as uid 1000, no prisma, typescript, vitest, eslint or
+    Nest CLI, no `.map` files, no `src` or `.env`
+  - Production stack with throwaway credentials (`docker compose -f docker-compose.prod.yml up`)
+    → migrations applied, API and worker healthy, `/health/ready` 200, Swagger 404, no host
+    port for PostgreSQL or Redis; seed, login (cookie `HttpOnly; Secure; SameSite=Strict`),
+    catalog and `/metrics` (401 without the token) work; as the app role `CREATE`, `DROP`,
+    `ALTER` and `TRUNCATE` are refused. Stack and volumes removed afterwards
+  - `load/run.sh` on the seed dataset (211 games; i5-1240P, 16 threads): uncached p95 39.2 ms
+    (bar 200 ms, 258 requests), cached p95 3.5 ms (bar 50 ms, 6001 requests at 200/s), 0 errors
+  - gitleaks over the history → 63 commits, no leaks
+  - Banned patterns: `grep -rnE "@ts-ignore|@ts-expect-error|eslint-disable|TODO|FIXME|console\.log|as any"
+    api/src api/test` → nothing outside the generated client; `any` as a type is a lint error
+  - actionlint on the workflows → no findings
+- Known limitations / open questions:
+  - CI, CodeQL and Dependabot have not run: P5 to P8 are committed locally and not pushed
+  - The production compose checks (ports, app role privileges) were run by hand, not by a test
+  - The app role can write `_prisma_migrations` (default privileges cover every table)
+  - Web-only rules (CSP, nothing secret in the bundle or `localStorage`) wait for P9
+
+---
+
 ### P7 — Observability — 2026-10-14
 - Status: done
 - Built:

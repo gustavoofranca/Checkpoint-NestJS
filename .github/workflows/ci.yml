@@ -39,6 +39,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Lint and format check
         run: |
           npm run lint
@@ -86,3 +89,50 @@ jobs:
           npm run db:seed
           npm run db:seed
           npm run admin:promote -- ana@checkpoint.test
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out the full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Scan every commit with gitleaks
+        run: >-
+          docker run --rm --volume "${PWD}:/repo:ro"
+          ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+          git /repo --redact --no-banner
+
+  image:
+    name: Production image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the runtime and migrate images
+        run: |
+          docker build --tag checkpoint-api:ci api
+          docker build --tag checkpoint-migrate:ci --target migrate api
+
+      - name: Check the runtime image runs as non-root without development files
+        run: |
+          uid="$(docker run --rm --entrypoint id checkpoint-api:ci -u)"
+          test "${uid}" != 0 || { echo "the image runs as root"; exit 1; }
+          docker run --rm --entrypoint sh checkpoint-api:ci -c '
+            for dependency in prisma typescript vitest eslint @nestjs/cli @nestjs/testing; do
+              if test -e "node_modules/${dependency}"; then
+                echo "development dependency in the image: ${dependency}"
+                exit 1
+              fi
+            done
+            if test -n "$(find dist -name "*.map")"; then echo "source maps in the image"; exit 1; fi
+            if test -e src || test -e .env; then echo "source or .env in the image"; exit 1; fi
+          '

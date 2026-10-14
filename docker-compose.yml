@@ -37,7 +37,8 @@ services:
       retries: 10
 
   # The queue worker (src/worker.ts), run from the host's build: `npm run build` in api/ first,
-  # then `docker compose --profile worker up -d`. The production image replaces this in P8.
+  # then `docker compose --profile worker up -d`. Production runs it from the image built by
+  # api/Dockerfile (docker-compose.prod.yml).
   worker:
     profiles: [worker]
     image: node:24.21.0-bookworm-slim

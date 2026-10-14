@@ -6,7 +6,7 @@ import { z } from 'zod';
 // three levels below api/, where prisma/data lives.
 const DATA_DIR = join(__dirname, '..', '..', '..', 'prisma', 'data');
 
-export const APP_IDS_FILE = join(DATA_DIR, 'steam-app-ids.json');
+const APP_IDS_FILE = join(DATA_DIR, 'steam-app-ids.json');
 export const SNAPSHOT_FILE = join(DATA_DIR, 'steam-snapshot.json');
 
 // `name` is only there so a reviewer can read the list; Steam's title is what gets stored.

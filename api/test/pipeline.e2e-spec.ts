@@ -1,6 +1,8 @@
+import { Server } from 'node:http';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { HEADERS_TIMEOUT_MS, REQUEST_TIMEOUT_MS } from '../src/common/configure-app';
 import { createTestApp } from './support/create-test-app';
 import { ProbeController } from './support/probe.controller';
 import { ALLOWED_ORIGIN } from './support/test-config';
@@ -120,6 +122,19 @@ describe('request pipeline', () => {
         status: 413,
         requestId: response.headers['x-request-id'],
       });
+    });
+  });
+
+  describe('server limits', () => {
+    it('bounds how long a client may take to send its headers and its request', () => {
+      const server: unknown = app.getHttpServer();
+      if (!(server instanceof Server)) {
+        throw new Error('expected a Node.js HTTP server');
+      }
+
+      expect(server.headersTimeout).toBe(HEADERS_TIMEOUT_MS);
+      expect(server.requestTimeout).toBe(REQUEST_TIMEOUT_MS);
+      expect(HEADERS_TIMEOUT_MS).toBeLessThan(REQUEST_TIMEOUT_MS);
     });
   });
 
