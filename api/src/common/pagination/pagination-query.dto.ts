@@ -6,7 +6,7 @@ const MAX_PAGE_SIZE = 50;
 
 // Every list endpoint takes these two parameters; there is no offset and no total count.
 export class PaginationQueryDto {
-  @ApiPropertyOptional({ minimum: 1, maximum: MAX_PAGE_SIZE, default: 20 })
+  @ApiPropertyOptional({ type: 'integer', minimum: 1, maximum: MAX_PAGE_SIZE, default: 20 })
   @Type(() => Number)
   @IsInt()
   @Min(1)

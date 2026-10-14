@@ -304,11 +304,7 @@
               "minimum": 1,
               "maximum": 50,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           },
           {
@@ -480,11 +476,7 @@
               "minimum": 1,
               "maximum": 50,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           },
           {
@@ -682,11 +674,7 @@
               "minimum": 1,
               "maximum": 50,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           },
           {
@@ -1023,11 +1011,7 @@
               "minimum": 1,
               "maximum": 50,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           },
           {
@@ -1384,10 +1368,6 @@
           "tokenType",
           "expiresIn"
         ]
-      },
-      "Object": {
-        "type": "object",
-        "properties": {}
       },
       "GenreRefDto": {
         "type": "object",
