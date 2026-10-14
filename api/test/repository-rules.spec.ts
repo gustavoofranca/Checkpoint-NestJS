@@ -30,19 +30,22 @@ describe('.env.example', () => {
 });
 
 describe('dependencies', () => {
-  it('pins every npm dependency to an exact version', async () => {
-    const manifest = z
-      .object({
-        dependencies: z.record(z.string(), z.string()),
-        devDependencies: z.record(z.string(), z.string()),
-      })
-      .parse(JSON.parse(await read('api/package.json')));
-    const versions = Object.entries({ ...manifest.dependencies, ...manifest.devDependencies });
+  it.each(['api/package.json', 'web/package.json'])(
+    'pins every npm dependency of %s to an exact version',
+    async (file) => {
+      const manifest = z
+        .object({
+          dependencies: z.record(z.string(), z.string()),
+          devDependencies: z.record(z.string(), z.string()),
+        })
+        .parse(JSON.parse(await read(file)));
+      const versions = Object.entries({ ...manifest.dependencies, ...manifest.devDependencies });
 
-    for (const [name, version] of versions) {
-      expect(version, name).toMatch(/^\d+\.\d+\.\d+$/);
-    }
-  });
+      for (const [name, version] of versions) {
+        expect(version, name).toMatch(/^\d+\.\d+\.\d+$/);
+      }
+    },
+  );
 
   it('pins every GitHub Action to a commit SHA', async () => {
     const files = await readdir(join(ROOT, '.github', 'workflows'));

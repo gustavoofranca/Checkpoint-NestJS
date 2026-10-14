@@ -90,6 +90,48 @@ jobs:
           npm run db:seed
           npm run admin:promote -- ana@checkpoint.test
 
+  web:
+    name: Web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Check that the API types match api/openapi.json
+        run: |
+          npm run api:types
+          git diff --exit-code -- src/api/schema.d.ts
+
+      - name: Lint and format check
+        run: |
+          npm run lint
+          npm run format:check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Type check and build
+        run: npm run build
+
   secrets:
     name: Secret scan
     runs-on: ubuntu-24.04
@@ -117,10 +159,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build the runtime and migrate images
+      - name: Build the runtime, migrate and web images
         run: |
           docker build --tag checkpoint-api:ci api
           docker build --tag checkpoint-migrate:ci --target migrate api
+          docker build --tag checkpoint-web:ci web
 
       - name: Check the runtime image runs as non-root without development files
         run: |
@@ -136,3 +179,13 @@ jobs:
             if test -n "$(find dist -name "*.map")"; then echo "source maps in the image"; exit 1; fi
             if test -e src || test -e .env; then echo "source or .env in the image"; exit 1; fi
           '
+
+      - name: Check the web image runs as non-root and serves the CSP
+        run: |
+          uid="$(docker run --rm --entrypoint id checkpoint-web:ci -u)"
+          test "${uid}" != 0 || { echo "the web image runs as root"; exit 1; }
+          docker run --detach --name web-check --env API_UPSTREAM=http://127.0.0.1:9 --publish 127.0.0.1:8080:8080 checkpoint-web:ci
+          for _ in $(seq 1 20); do curl --silent --fail --output /dev/null http://127.0.0.1:8080/ && break; sleep 0.5; done
+          curl --silent --show-error --fail --dump-header - --output /dev/null http://127.0.0.1:8080/games/hades \
+            | grep -i "^content-security-policy: default-src 'self'; script-src 'self'"
+          docker rm --force web-check

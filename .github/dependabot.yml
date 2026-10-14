@@ -15,6 +15,22 @@ updates:
       lint-and-format:
         patterns: ['eslint', '@eslint/*', 'typescript-eslint', 'eslint-config-prettier', 'prettier']
 
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      react:
+        patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
+      lint-and-format:
+        patterns: ['eslint', '@eslint/js', 'typescript-eslint', 'eslint-*', 'prettier']
+
+  - package-ecosystem: docker
+    directory: /web
+    schedule:
+      interval: weekly
+
   - package-ecosystem: docker
     directory: /api
     schedule:
