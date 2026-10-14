@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GamesService } from '../games/games.service';
 import type { ReviewDto } from './dto/review.dto';
 import type { UpsertReviewDto } from './dto/upsert-review.dto';
+import { refreshRating } from './rating-aggregate';
 
 const REVIEW_SELECT = {
   id: true,
@@ -133,20 +134,4 @@ async function lockGame(tx: Tx, slug: string): Promise<string> {
     throw new NotFoundException('Game not found.');
   }
   return game.id;
-}
-
-async function refreshRating(tx: Tx, gameId: string): Promise<void> {
-  const stats = await tx.review.aggregate({
-    where: { gameId },
-    _avg: { rating: true },
-    _count: { _all: true },
-  });
-  const average =
-    stats._avg.rating === null
-      ? new Prisma.Decimal(0)
-      : new Prisma.Decimal(stats._avg.rating).toDecimalPlaces(2);
-  await tx.game.update({
-    where: { id: gameId },
-    data: { ratingAverage: average, ratingCount: stats._count._all },
-  });
 }
