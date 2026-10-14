@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import type { AppConfig } from '../src/config/app-config';
 import { Role } from '../src/generated/prisma/client';
 import { forgeToken } from './support/auth';
@@ -24,6 +25,33 @@ const PROTECTED_ROUTES: { method: Method; path: (slug: string, gameId: string) =
   { method: 'get', path: () => '/api/v1/admin/sync/runs' },
 ];
 
+// Every other route: open to anonymous callers, or protected by something other than an access
+// token (the refresh cookie, METRICS_TOKEN). api/test/README.md lists them and why.
+const OTHER_ROUTES = [
+  'POST /api/v1/auth/register',
+  'POST /api/v1/auth/login',
+  'POST /api/v1/auth/refresh',
+  'POST /api/v1/auth/logout',
+  'GET /api/v1/games',
+  'GET /api/v1/games/{slug}',
+  'GET /api/v1/genres',
+  'GET /api/v1/games/{slug}/reviews',
+  'GET /api/v1/users/{username}',
+  'GET /api/v1/health/live',
+  'GET /api/v1/health/ready',
+  'GET /api/v1/metrics',
+];
+
+const openApiDocument = z.object({
+  paths: z.record(
+    z.string(),
+    z.record(
+      z.string(),
+      z.object({ security: z.array(z.record(z.string(), z.unknown())).optional() }),
+    ),
+  ),
+});
+
 describe('authorization matrix: every protected route', () => {
   const prisma = createTestPrismaClient();
   let app: NestExpressApplication;
@@ -43,6 +71,37 @@ describe('authorization matrix: every protected route', () => {
   afterAll(async () => {
     await app.close();
     await prisma.$disconnect();
+  });
+
+  // A route added without a place in one of the two lists fails here, so the matrix below cannot
+  // silently miss it.
+  it('lists every route of the API, and exactly those that require an access token', async () => {
+    const document = openApiDocument.parse(
+      (await request(app.getHttpServer()).get('/api/v1/docs/openapi.json').expect(200)).body,
+    );
+    const operations = Object.entries(document.paths).flatMap(([path, methods]) =>
+      Object.entries(methods).map(([method, operation]) => ({
+        route: `${method.toUpperCase()} ${path}`,
+        bearer: operation.security?.some((scheme) => 'bearer' in scheme) === true,
+      })),
+    );
+
+    expect(
+      operations
+        .filter((operation) => operation.bearer)
+        .map((o) => o.route)
+        .sort(),
+    ).toEqual(
+      PROTECTED_ROUTES.map(
+        (route) => `${route.method.toUpperCase()} ${route.path('{slug}', '{gameId}')}`,
+      ).sort(),
+    );
+    expect(
+      operations
+        .filter((operation) => !operation.bearer)
+        .map((o) => o.route)
+        .sort(),
+    ).toEqual([...OTHER_ROUTES].sort());
   });
 
   const call = (route: (typeof PROTECTED_ROUTES)[number]) =>
