@@ -2,6 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import { AppConfig } from '../../config/app-config';
 import { REFRESH_COOKIE } from '../../modules/auth/refresh-cookie';
+import { METRICS_AUTH } from '../../modules/metrics/metrics.controller';
 
 export const DOCS_PATH = 'api/v1/docs';
 
@@ -14,6 +15,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .setVersion('1.0')
     .addBearerAuth()
     .addCookieAuth(REFRESH_COOKIE)
+    .addBearerAuth({ type: 'http', scheme: 'bearer', description: 'METRICS_TOKEN' }, METRICS_AUTH)
     .build();
   return SwaggerModule.createDocument(app, config);
 }

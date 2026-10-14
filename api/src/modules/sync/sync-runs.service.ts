@@ -21,6 +21,15 @@ export interface SyncCounts {
   gamesFailed: number;
 }
 
+// What /metrics reports about syncs. Read from the table at scrape time, because the runs happen in
+// the worker process, which serves no metrics endpoint (docs/adr/0011).
+export interface SyncRunStats {
+  finished: { succeeded: number; failed: number };
+  running: boolean;
+  lastFinished: { succeeded: boolean; durationSeconds: number } | null;
+  lastSucceededAt: Date | null;
+}
+
 const RUN_SELECT = {
   id: true,
   trigger: true,
@@ -81,6 +90,37 @@ export class SyncRunsService {
       },
     });
     return result.count;
+  }
+
+  async stats(): Promise<SyncRunStats> {
+    const [counts, lastFinished, lastSucceeded] = await Promise.all([
+      this.prisma.syncRun.groupBy({ by: ['status'], _count: { _all: true } }),
+      this.prisma.syncRun.findFirst({
+        where: { finishedAt: { not: null } },
+        orderBy: { finishedAt: 'desc' },
+        select: { status: true, startedAt: true, finishedAt: true },
+      }),
+      this.prisma.syncRun.findFirst({
+        where: { status: SyncStatus.SUCCEEDED },
+        orderBy: { finishedAt: 'desc' },
+        select: { finishedAt: true },
+      }),
+    ]);
+    const countOf = (status: SyncStatus) =>
+      counts.find((row) => row.status === status)?._count._all ?? 0;
+    const finishedAt = lastFinished?.finishedAt ?? null;
+    return {
+      finished: { succeeded: countOf(SyncStatus.SUCCEEDED), failed: countOf(SyncStatus.FAILED) },
+      running: countOf(SyncStatus.RUNNING) > 0,
+      lastFinished:
+        lastFinished === null || finishedAt === null
+          ? null
+          : {
+              succeeded: lastFinished.status === SyncStatus.SUCCEEDED,
+              durationSeconds: (finishedAt.getTime() - lastFinished.startedAt.getTime()) / 1000,
+            },
+      lastSucceededAt: lastSucceeded?.finishedAt ?? null,
+    };
   }
 
   async list(query: PaginationQueryDto): Promise<Page<SyncRunDto>> {

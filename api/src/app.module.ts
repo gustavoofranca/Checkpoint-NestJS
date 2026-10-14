@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { GamesModule } from './modules/games/games.module';
 import { HealthModule } from './modules/health/health.module';
 import { LibraryModule } from './modules/library/library.module';
+import { MetricsModule } from './modules/metrics/metrics.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { UsersModule } from './modules/users/users.module';
 import { BullRootModule } from './modules/sync/bull-root.module';
@@ -33,6 +34,7 @@ export class AppModule {
         BullRootModule,
         SyncModule,
         HealthModule,
+        MetricsModule,
       ],
     };
   }
