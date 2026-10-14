@@ -11,6 +11,8 @@ export class AppConfig {
   readonly jwtSecret: string;
   readonly enableDocs: boolean;
   readonly trustProxyHops: number;
+  readonly metricsToken: string | undefined;
+  readonly sentryDsn: string | undefined;
 
   constructor(env: Env) {
     this.nodeEnv = env.NODE_ENV;
@@ -22,6 +24,8 @@ export class AppConfig {
     this.jwtSecret = env.JWT_SECRET;
     this.enableDocs = env.ENABLE_DOCS === 'true';
     this.trustProxyHops = env.TRUST_PROXY_HOPS;
+    this.metricsToken = env.METRICS_TOKEN;
+    this.sentryDsn = env.SENTRY_DSN;
   }
 }
 

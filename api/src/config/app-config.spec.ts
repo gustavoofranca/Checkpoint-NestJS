@@ -83,6 +83,27 @@ describe('loadConfig', () => {
     expect(problems).toHaveLength(2);
   });
 
+  it('leaves METRICS_TOKEN and SENTRY_DSN unset when they are missing or empty', () => {
+    for (const value of [undefined, '']) {
+      const config = loadConfig(testEnv({ METRICS_TOKEN: value, SENTRY_DSN: value }));
+
+      expect(config.metricsToken).toBeUndefined();
+      expect(config.sentryDsn).toBeUndefined();
+    }
+  });
+
+  it('rejects a METRICS_TOKEN shorter than 32 characters without echoing it', () => {
+    const problems = problemsFor(testEnv({ METRICS_TOKEN: 'short-metrics-token' }));
+
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/^METRICS_TOKEN: /);
+    expect(problems[0]).not.toContain('short-metrics-token');
+  });
+
+  it('rejects a SENTRY_DSN that is not an http(s) URL', () => {
+    expect(problemsFor(testEnv({ SENTRY_DSN: 'not a url' }))[0]).toMatch(/^SENTRY_DSN: /);
+  });
+
   it('puts every problem in the error message', () => {
     expect(() => loadConfig(testEnv({ JWT_SECRET: undefined }))).toThrow(
       'Invalid environment configuration:\n  - JWT_SECRET: is required',
