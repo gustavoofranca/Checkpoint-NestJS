@@ -18,7 +18,8 @@ runCli(async () => {
     const report = await seedDatabase(prisma, snapshot, demoPasswordHash);
     print(
       `Seeded ${String(report.games)} games and ${String(report.genres)} genres; ` +
-        `created ${String(report.demoUsersCreated)} demo users.`,
+        `created ${String(report.demoUsersCreated)} demo users and ` +
+        `${String(report.demoReviewsCreated)} demo reviews.`,
     );
   } finally {
     await prisma.$disconnect();
