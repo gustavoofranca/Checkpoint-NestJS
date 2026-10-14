@@ -1,7 +1,8 @@
 import { HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 import { RequestValidationException } from '../validation/request-validation.exception';
-import { toProblemDetails } from './problem-details';
+import { Prisma } from '../../generated/prisma/client';
+import { isExpectedError, toProblemDetails } from './problem-details';
 
 const REQUEST_ID = '0192f0c4-7b1e-7cc0-9a51-2f6d1e0b5a10';
 
@@ -70,6 +71,32 @@ describe('toProblemDetails', () => {
 
     expect(problem.status).toBe(500);
     expect(problem.detail).not.toContain('db-1');
+  });
+
+  it('turns a unique constraint violation into a 409 that does not name the columns', () => {
+    const violation = new Prisma.PrismaClientKnownRequestError(
+      'Unique constraint failed on the fields: (`email`)',
+      { code: 'P2002', clientVersion: '7.10.0', meta: { target: ['email'] } },
+    );
+
+    expect(isExpectedError(violation)).toBe(true);
+    expect(toProblemDetails(violation, REQUEST_ID)).toEqual({
+      type: 'about:blank',
+      title: 'Conflict',
+      status: 409,
+      detail: 'The request conflicts with data that already exists.',
+      requestId: REQUEST_ID,
+    });
+  });
+
+  it('keeps other database errors unexpected', () => {
+    const foreignKey = new Prisma.PrismaClientKnownRequestError('Foreign key constraint failed', {
+      code: 'P2003',
+      clientVersion: '7.10.0',
+    });
+
+    expect(isExpectedError(foreignKey)).toBe(false);
+    expect(toProblemDetails(foreignKey, REQUEST_ID).status).toBe(500);
   });
 
   it('treats a thrown non-Error value as unexpected', () => {

@@ -1,5 +1,6 @@
 import { STATUS_CODES } from 'node:http';
 import { HttpException } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import {
   type FieldError,
   RequestValidationException,
@@ -24,13 +25,16 @@ interface ExposedClientError extends Error {
 
 const UNEXPECTED_ERROR_DETAIL =
   'An unexpected error occurred. Quote the request id when reporting it.';
+const UNIQUE_CONFLICT_DETAIL = 'The request conflicts with data that already exists.';
 
 // Expected errors carry messages written for the client. Anything else is unexpected, and its
 // message may carry SQL, hostnames or file paths, so it is never echoed.
-export function isExpectedError(
-  exception: unknown,
-): exception is HttpException | ExposedClientError {
-  return exception instanceof HttpException || isExposedClientError(exception);
+export function isExpectedError(exception: unknown): boolean {
+  return (
+    exception instanceof HttpException ||
+    isExposedClientError(exception) ||
+    isUniqueViolation(exception)
+  );
 }
 
 export function toProblemDetails(
@@ -60,7 +64,16 @@ function describe(exception: unknown): { status: number; detail: string } {
   if (isExposedClientError(exception)) {
     return { status: exception.status, detail: exception.message };
   }
+  // A unique constraint no service turned into its own error: a conflict, described without
+  // Prisma's message, which names the table and columns (docs/SECURITY.md section 6).
+  if (isUniqueViolation(exception)) {
+    return { status: 409, detail: UNIQUE_CONFLICT_DETAIL };
+  }
   return { status: 500, detail: UNEXPECTED_ERROR_DETAIL };
+}
+
+function isUniqueViolation(exception: unknown): boolean {
+  return exception instanceof Prisma.PrismaClientKnownRequestError && exception.code === 'P2002';
 }
 
 function isExposedClientError(exception: unknown): exception is ExposedClientError {
