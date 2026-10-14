@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
+import { initSentry } from './common/error-reporting/sentry';
 import { loadConfigOrExit } from './config/load-config-or-exit';
 import { WorkerModule } from './worker.module';
 
@@ -7,6 +8,7 @@ import { WorkerModule } from './worker.module';
 // keeps the daily schedule. npm run worker.
 async function bootstrap(): Promise<void> {
   const config = loadConfigOrExit();
+  initSentry(config);
   const app = await NestFactory.createApplicationContext(WorkerModule.forRoot(config), {
     bufferLogs: true,
   });
