@@ -16,9 +16,11 @@ type Method = 'get' | 'post' | 'put' | 'delete';
 // api/test/README.md points at this table (docs/SECURITY.md section 1).
 const PROTECTED_ROUTES: { method: Method; path: (slug: string, gameId: string) => string }[] = [
   { method: 'get', path: () => '/api/v1/auth/me' },
+  { method: 'get', path: (slug) => `/api/v1/games/${slug}/reviews/me` },
   { method: 'put', path: (slug) => `/api/v1/games/${slug}/reviews/me` },
   { method: 'delete', path: (slug) => `/api/v1/games/${slug}/reviews/me` },
   { method: 'get', path: () => '/api/v1/me/library' },
+  { method: 'get', path: (_, gameId) => `/api/v1/me/library/${gameId}` },
   { method: 'put', path: (_, gameId) => `/api/v1/me/library/${gameId}` },
   { method: 'delete', path: (_, gameId) => `/api/v1/me/library/${gameId}` },
   { method: 'post', path: () => '/api/v1/admin/sync' },

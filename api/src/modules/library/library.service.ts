@@ -58,6 +58,17 @@ export class LibraryService {
     );
   }
 
+  async get(userId: string, gameId: string): Promise<LibraryEntryDto> {
+    const entry = await this.prisma.libraryEntry.findUnique({
+      where: { userId_gameId: { userId, gameId } },
+      select: ENTRY_SELECT,
+    });
+    if (entry === null) {
+      throw new NotFoundException('This game is not in your library.');
+    }
+    return toEntryDto(entry);
+  }
+
   async setStatus(userId: string, gameId: string, status: LibraryStatus): Promise<LibraryEntryDto> {
     try {
       const entry = await this.prisma.libraryEntry.upsert({

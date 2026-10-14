@@ -213,6 +213,35 @@ describe('reviews', () => {
     });
   });
 
+  describe('GET /games/:slug/reviews/me', () => {
+    const getOwn = (user: Signed, slug: string) =>
+      http()
+        .get(`/api/v1/games/${slug}/reviews/me`)
+        .set('Authorization', `Bearer ${user.accessToken}`);
+
+    it('returns the caller’s review of the game', async () => {
+      const ana = await registerAndLogin(app);
+      const written = reviewSchema.parse(
+        (await put(ana, 'hades', { rating: 4, body: BODY }).expect(200)).body,
+      );
+
+      const read = reviewSchema.parse((await getOwn(ana, 'hades').expect(200)).body);
+
+      expect(read).toEqual(written);
+    });
+
+    it('answers 404 when the caller has not reviewed the game, even if someone else has', async () => {
+      const [ana, bruno] = await Promise.all([registerAndLogin(app), registerAndLogin(app)]);
+      await put(bruno, 'hades', { rating: 2, body: BODY }).expect(200);
+
+      await getOwn(ana, 'hades').expect(404);
+    });
+
+    it('answers 404 for an unknown game', async () => {
+      await getOwn(await registerAndLogin(app), 'no-such-game').expect(404);
+    });
+  });
+
   describe('one user cannot touch another user’s review', () => {
     it('deleting "me" never removes someone else’s review', async () => {
       const [ana, bruno] = await Promise.all([registerAndLogin(app), registerAndLogin(app)]);

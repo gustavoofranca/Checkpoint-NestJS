@@ -73,6 +73,23 @@ export class ReviewsService {
     );
   }
 
+  // The caller's review of a game, for an edit form. Selected by the caller's id, so it can only
+  // ever return their own.
+  async getOwn(userId: string, slug: string): Promise<ReviewDto> {
+    const game = await this.prisma.game.findUnique({ where: { slug }, select: { id: true } });
+    if (game === null) {
+      throw new NotFoundException('Game not found.');
+    }
+    const review = await this.prisma.review.findUnique({
+      where: { userId_gameId: { userId, gameId: game.id } },
+      select: REVIEW_SELECT,
+    });
+    if (review === null) {
+      throw new NotFoundException('You have not reviewed this game.');
+    }
+    return toReviewDto(review);
+  }
+
   // Creates or replaces the caller's review. The author is always the caller: there is no way to
   // address another user's review.
   async upsertOwn(userId: string, slug: string, dto: UpsertReviewDto): Promise<ReviewDto> {

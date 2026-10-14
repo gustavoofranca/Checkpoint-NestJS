@@ -34,6 +34,17 @@ export class LibraryController {
     return this.library.list(user.id, query);
   }
 
+  @Get(':gameId')
+  @ApiOperation({ summary: 'One game of your library, with its status' })
+  @ApiOkResponse({ type: LibraryEntryDto })
+  @ApiProblemResponses(400, 401, 404)
+  get(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: GameIdParamDto,
+  ): Promise<LibraryEntryDto> {
+    return this.library.get(user.id, params.gameId);
+  }
+
   @Put(':gameId')
   @ApiOperation({ summary: 'Add a game to your library or change its status' })
   @ApiOkResponse({ type: LibraryEntryDto })
