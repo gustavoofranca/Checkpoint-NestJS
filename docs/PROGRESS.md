@@ -14,6 +14,57 @@ Updated by the agent at the end of every phase. Newest entry first.
 
 ---
 
+### P5 — Cache and rate limiting — 2026-10-13
+- Status: done
+- Built:
+  - `src/redis/cache.service.ts`: cache-aside with versioned keys (`games:v<n>:…`), hit and miss
+    counters; applied to `GET /games` (5 min), `/games/:slug` (10 min) and `/genres` (5 min)
+  - Review writes invalidate the catalog after their transaction commits
+  - Redis client: no offline queue and a 500 ms command timeout, so an unavailable Redis fails
+    fast; startup waits up to 2 s for the first connection but does not require it
+  - `src/rate-limit`: Redis storage (one Lua script per request), `AppThrottlerGuard` (standard
+    `Retry-After`), `@AuthRateLimit()`; limiters `default`, `auth-ip`, `auth-account`
+  - `TRUST_PROXY_HOPS` setting for the client IP
+  - Tests: `cache.e2e-spec.ts`, `rate-limit.e2e-spec.ts`; tests use Redis database 1, emptied
+    before every e2e test
+  - `docs/adr/0007` (versioned cache keys), `docs/adr/0008` (rate limiting)
+- Decisions not dictated by the spec:
+  - Limits: 300 requests a minute per IP everywhere; 30 credential requests per 15 minutes per IP
+    on login, register and refresh; 5 per 15 minutes per email on login and register; blocks last
+    15 minutes (`docs/adr/0008`)
+  - When Redis is down the credential limiters fail closed (503) and the global one fails open
+  - Every login attempt counts, not only failed ones: counting failures would need the limiter
+    after the Argon2 check, which an attacker could make the server run without limit
+  - Own throttler storage instead of `@nest-lab/throttler-storage-redis`: about forty lines, no
+    extra package, and the failure mode can differ per limiter
+  - List cache keys hash the normalized query; searches that differ only in case share an entry
+  - Invalidation is per namespace: one review makes every cached catalog page miss once
+  - `X-RateLimit-*` headers are off; only `Retry-After` is sent, on 429
+- Dependencies added (name@version): @nestjs/throttler@6.7.1
+- Verification (command → result):
+  - Second identical `GET /games` → served from the cache: 0 SQL statements, hit counter +1
+  - After a review write, `GET /games/:slug` and the `top_rated` list show the new rating; with
+    the invalidation call removed the same test fails (negative control)
+  - Redis unreachable → `/games`, `/games/:slug`, `/genres` answer 200 in under a second each
+  - 6th login for one email within the window → 429 Problem Details, `Retry-After` in seconds
+    (1–900); case and spacing variants of the email count together; another email is unaffected
+  - 31st credential request from one IP → 429; a spoofed `X-Forwarded-For` does not reset the IP
+    count; with `TRUST_PROXY_HOPS=1` the account limit holds across client IPs and IPs count
+    separately
+  - 301st request a minute to any route → 429
+  - Redis unreachable → login 503, catalog 200
+  - Storage: counts, blocks past the limit, does not count while blocked, releases after expiry
+  - `npm run test:cov` → 287 of 287; lines 97.8%, branches 85.8%; lint, format, typecheck, build
+    pass; `db:drift` → no difference; `npm audit --omit=dev` → 0
+- Known limitations / open questions:
+  - Five failed logins lock an account's login for 15 minutes, which someone else can trigger on
+    purpose (`docs/adr/0008`)
+  - Cache metrics are counters in memory, exported in P7
+  - On 2026-10-13 the development PostgreSQL and Redis volumes turned out to have been recreated
+    outside this work; the development database was migrated and seeded again
+
+---
+
 ### P4 — Reviews, library, profiles — 2026-10-09
 - Status: done
 - Built:

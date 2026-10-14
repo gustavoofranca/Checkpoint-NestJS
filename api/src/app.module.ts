@@ -9,6 +9,7 @@ import { HealthModule } from './modules/health/health.module';
 import { LibraryModule } from './modules/library/library.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { UsersModule } from './modules/users/users.module';
+import { RateLimitModule } from './rate-limit/rate-limit.module';
 
 @Module({})
 export class AppModule {
@@ -18,6 +19,8 @@ export class AppModule {
       imports: [
         ConfigModule.forRoot(config),
         LoggerModule.forRoot(createLoggerParams(config)),
+        // Before AuthModule: its global guard runs first, so unauthenticated floods are limited too.
+        RateLimitModule,
         AuthModule,
         GamesModule,
         ReviewsModule,

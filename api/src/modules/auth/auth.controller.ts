@@ -12,6 +12,7 @@ import type { Request, Response } from 'express';
 import { CurrentUser, Public } from '../../common/auth/auth.decorators';
 import type { AuthenticatedUser } from '../../common/auth/authenticated-user';
 import { ApiProblemResponses } from '../../common/openapi/api-problem-responses.decorator';
+import { AuthRateLimit } from '../../rate-limit/auth-rate-limit.decorator';
 import { UserResponseDto } from '../users/dto/user-response.dto';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
@@ -35,15 +36,17 @@ export class AuthController {
   ) {}
 
   @Public()
+  @AuthRateLimit({ perAccount: true })
   @Post('register')
   @ApiOperation({ summary: 'Create an account' })
   @ApiCreatedResponse({ type: UserResponseDto })
-  @ApiProblemResponses(400, 409)
+  @ApiProblemResponses(400, 409, 429, 503)
   register(@Body() dto: RegisterDto): Promise<UserResponseDto> {
     return this.auth.register(dto);
   }
 
   @Public()
+  @AuthRateLimit({ perAccount: true })
   @Post('login')
   @HttpCode(200)
   @ApiOperation({
@@ -51,7 +54,7 @@ export class AuthController {
     description: `Returns an access token and sets the ${REFRESH_COOKIE} cookie.`,
   })
   @ApiOkResponse({ type: AccessTokenResponseDto })
-  @ApiProblemResponses(400, 401)
+  @ApiProblemResponses(400, 401, 429, 503)
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) response: Response,
@@ -62,6 +65,7 @@ export class AuthController {
   }
 
   @Public()
+  @AuthRateLimit({ perAccount: false })
   @UseGuards(TrustedOriginGuard)
   @Post('refresh')
   @HttpCode(200)
@@ -72,7 +76,7 @@ export class AuthController {
       'Rotates the refresh cookie. Reusing a rotated cookie ends the session. Requires an allow-listed Origin header.',
   })
   @ApiOkResponse({ type: AccessTokenResponseDto })
-  @ApiProblemResponses(401, 403)
+  @ApiProblemResponses(401, 403, 429, 503)
   async refresh(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,

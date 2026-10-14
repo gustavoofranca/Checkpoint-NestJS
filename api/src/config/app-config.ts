@@ -10,6 +10,7 @@ export class AppConfig {
   readonly redisUrl: string;
   readonly jwtSecret: string;
   readonly enableDocs: boolean;
+  readonly trustProxyHops: number;
 
   constructor(env: Env) {
     this.nodeEnv = env.NODE_ENV;
@@ -20,6 +21,7 @@ export class AppConfig {
     this.redisUrl = env.REDIS_URL;
     this.jwtSecret = env.JWT_SECRET;
     this.enableDocs = env.ENABLE_DOCS === 'true';
+    this.trustProxyHops = env.TRUST_PROXY_HOPS;
   }
 }
 

@@ -19,6 +19,8 @@ export const APP_OPTIONS: NestApplicationOptions = { bodyParser: false, bufferLo
 export function configureApp(app: NestExpressApplication): void {
   const config = app.get(AppConfig);
 
+  // Express derives request.ip, which the rate limiter keys on, from this setting.
+  app.set('trust proxy', config.trustProxyHops);
   app.use(assignRequestId);
   app.useLogger(app.get(Logger));
   app.use(helmet());
