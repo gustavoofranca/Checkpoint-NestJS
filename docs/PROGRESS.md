@@ -14,6 +14,68 @@ Updated by the agent at the end of every phase. Newest entry first.
 
 ---
 
+### P6 — Catalog sync — 2026-10-13
+- Status: done
+- Built:
+  - `src/modules/sync/steam/steam-client.ts`: fixed host, 10 s timeout, 2 MB cap enforced while
+    reading, redirects never followed, retries after 5, 15 and 45 s on 429, 403, 5xx and network
+    errors; payloads validated and normalized by the P1 normalizer
+  - `SyncRunner`: one app at a time, 2 s apart; bad games are counted in `gamesFailed` and skipped;
+    Steam unavailable after the last retry ends the run `FAILED`; the catalog cache is invalidated
+    when any game was written
+  - `SyncRunsService`: `SyncRun` lifecycle; at most one `RUNNING` row, enforced by the database
+    (new `running_lock` column, unique, tied to the status by a CHECK; migration
+    `20261013164708_one_running_sync`); runs left `RUNNING` by a stopped worker are marked `FAILED`
+    when a worker starts
+  - BullMQ queue `catalog-sync`; `SyncProcessor` and the daily job scheduler (04:00 UTC) run only
+    in the worker process (`src/worker.ts`, `WorkerModule`, `npm run worker`)
+  - `POST /admin/sync` (202 with the run id; 409 while a run is active; 503 if the queue cannot
+    take the job within 2 s) and `GET /admin/sync/runs` (cursor pagination), ADMIN only
+  - `catalog-writer.ts`: genre upsert, slug choice and game write shared by the seed and the sync;
+    curated list loading moved to `src/modules/sync/data-files.ts`
+  - Docker Compose `worker` service under the `worker` profile
+  - Tests: a local fake Steam HTTP server (`test/support/fake-steam.ts`) for the client, sync,
+    admin and worker suites; the admin routes added to the authorization matrix
+  - `docs/adr/0009` (appdetails over a curated list), `docs/adr/0010` (separate worker process)
+- Decisions not dictated by the spec:
+  - Requests 2 s apart, one app per request: Steam publishes no limit, and appdetails answers 400
+    to several ids at once (`docs/adr/0009`)
+  - The catalog follows the curated list of 211 games, never Steam's full app list
+  - One attempt per job instead of job-level retries with backoff: the client already retries
+    each request, and a whole-run retry would repeat about 7 minutes of requests
+    (`docs/adr/0010`, which records the departure from `docs/ARCHITECTURE.md`)
+  - A job carries its run id, and the worker skips a job whose run is no longer `RUNNING`, so a
+    run closed because it could not be queued is never reopened
+  - Enqueueing gives up after 2 s: BullMQ waits for its Redis connection before any command, so
+    without the timeout `POST /admin/sync` would hang while Redis is down
+  - A scheduled job that finds a run in progress is skipped with a warning, not queued for later
+  - An existing game keeps its slug and rating on refresh; a new game whose slug is taken gets
+    `-<appId>` appended
+- Dependencies added (name@version): bullmq@6.3.14, @nestjs/bullmq@12.0.0
+- Verification (command → result):
+  - Normal run, malformed games counted and skipped, 429 then success, full outage → `FAILED`
+    with the games written before it kept: `test/sync.e2e-spec.ts`
+  - HTML stripped from descriptions; an image from an unlisted host rejected: normalizer and
+    sync tests
+  - `POST /admin/sync` → 401 without a token, 403 for a USER, 409 while a run is active, 202 for
+    an ADMIN; Redis unreachable → 503 within 3 s and the run closed: `test/admin-sync.e2e-spec.ts`
+  - A manual run end to end through the queue and the worker; one daily schedule however many
+    times the worker starts; the unmodified `WorkerModule` consumes the queue: admin-sync and
+    `test/worker.e2e-spec.ts`
+  - Real run against Steam, first 10 curated ids (10, 70, 220, 400, 440, 550, 570, 620, 730,
+    1250) → `SUCCEEDED`, 10 processed, 0 failed, 20.8 s
+  - `docker compose --profile worker up worker` → logs "Daily catalog sync scheduled"
+  - `npm run test:cov` → 343 of 343; lines 98.1%, branches 85.2%; lint, format, typecheck, build
+    pass; `db:drift` → no difference; `npm audit` → 0
+- Known limitations / open questions:
+  - Steam's rate limit is unpublished; 2 s apart is a margin over community reports, not a
+    guarantee
+  - Prices are US list prices in USD
+  - The worker is a single process; `failInterrupted` assumes no other worker is running
+  - Sync metrics (run duration, games per run) are left to P7
+
+---
+
 ### P5 — Cache and rate limiting — 2026-10-13
 - Status: done
 - Built:

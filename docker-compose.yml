@@ -36,6 +36,28 @@ services:
       timeout: 3s
       retries: 10
 
+  # The queue worker (src/worker.ts), run from the host's build: `npm run build` in api/ first,
+  # then `docker compose --profile worker up -d`. The production image replaces this in P8.
+  worker:
+    profiles: [worker]
+    image: node:24.21.0-bookworm-slim
+    user: node
+    working_dir: /app
+    command: ['node', 'dist/worker.js']
+    volumes:
+      - ./api:/app:ro
+    env_file: .env
+    environment:
+      # Inside the Compose network the services are reached by name, on their own ports.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   redis-data:

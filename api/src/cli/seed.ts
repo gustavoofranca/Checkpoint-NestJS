@@ -4,7 +4,7 @@ import { PasswordHasher } from '../modules/users/password-hasher';
 import { catalogSnapshotSchema } from '../modules/sync/catalog-game';
 import { createPrismaClient } from '../prisma/create-prisma-client';
 import { seedDatabase } from '../prisma/seed-database';
-import { SNAPSHOT_FILE } from './data-files';
+import { SNAPSHOT_FILE } from '../modules/sync/data-files';
 import { print, runCli } from './run-cli';
 
 // npm run db:seed. Loads the bundled Steam snapshot and the demo users; safe to run repeatedly.

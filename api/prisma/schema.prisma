@@ -183,6 +183,9 @@ model SyncRun {
   gamesProcessed Int         @default(0) @map("games_processed")
   gamesFailed    Int         @default(0) @map("games_failed")
   errorMessage   String?     @map("error_message") @db.VarChar(500)
+  // true while RUNNING, null otherwise. Unique, so the database admits one running sync at a
+  // time even when two are requested at once (docs/adr/0010).
+  runningLock    Boolean?    @unique @map("running_lock")
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
 

@@ -9,7 +9,7 @@ import { createTestApp } from './support/create-test-app';
 import { createGame, createTestPrismaClient, resetDatabase } from './support/database';
 import { liveDependencies, testConfig } from './support/test-config';
 
-type Method = 'get' | 'put' | 'delete';
+type Method = 'get' | 'post' | 'put' | 'delete';
 
 // Every route that needs an access token. A new protected route belongs here: the matrix in
 // api/test/README.md points at this table (docs/SECURITY.md section 1).
@@ -20,6 +20,8 @@ const PROTECTED_ROUTES: { method: Method; path: (slug: string, gameId: string) =
   { method: 'get', path: () => '/api/v1/me/library' },
   { method: 'put', path: (_, gameId) => `/api/v1/me/library/${gameId}` },
   { method: 'delete', path: (_, gameId) => `/api/v1/me/library/${gameId}` },
+  { method: 'post', path: () => '/api/v1/admin/sync' },
+  { method: 'get', path: () => '/api/v1/admin/sync/runs' },
 ];
 
 describe('authorization matrix: every protected route', () => {

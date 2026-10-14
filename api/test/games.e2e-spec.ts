@@ -3,7 +3,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { SNAPSHOT_FILE } from '../src/cli/data-files';
+import { SNAPSHOT_FILE } from '../src/modules/sync/data-files';
 import { encodeCursor, INVALID_CURSOR } from '../src/common/pagination/cursor';
 import { catalogSnapshotSchema } from '../src/modules/sync/catalog-game';
 import { seedDatabase } from '../src/prisma/seed-database';

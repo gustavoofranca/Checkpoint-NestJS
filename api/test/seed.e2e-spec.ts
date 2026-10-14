@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { SNAPSHOT_FILE } from '../src/cli/data-files';
+import { SNAPSHOT_FILE } from '../src/modules/sync/data-files';
 import { type CatalogSnapshot, catalogSnapshotSchema } from '../src/modules/sync/catalog-game';
 import { PasswordHasher } from '../src/modules/users/password-hasher';
 import { DEMO_USERS, seedDatabase } from '../src/prisma/seed-database';

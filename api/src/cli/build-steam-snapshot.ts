@@ -1,10 +1,9 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { z } from 'zod';
 import type { CatalogGame, CatalogSnapshot } from '../modules/sync/catalog-game';
 import { normalizeSteamApp } from '../modules/sync/steam/normalize-steam-app';
 import { steamAppDetailsResponseSchema } from '../modules/sync/steam/steam-app-details.schema';
-import { APP_IDS_FILE, SNAPSHOT_FILE } from './data-files';
+import { loadCuratedAppIds, SNAPSHOT_FILE } from '../modules/sync/data-files';
 
 // Developer tool: refreshes the bundled snapshot that the seed loads. It is run by hand, rarely,
 // and never in CI. The scheduled sync (P6) has its own client with tests.
@@ -59,21 +58,8 @@ async function fetchAppDetails(appId: number): Promise<unknown> {
   }
 }
 
-// `name` is only there so a reviewer can read the list; Steam's title is what gets stored.
-const appIdListSchema = z.array(z.object({ appId: z.number().int().positive(), name: z.string() }));
-
-async function loadAppIds(): Promise<number[]> {
-  const ids = appIdListSchema
-    .parse(JSON.parse(await readFile(APP_IDS_FILE, 'utf8')))
-    .map((entry) => entry.appId);
-  if (new Set(ids).size !== ids.length) {
-    throw new Error(`${APP_IDS_FILE} contains duplicate app ids`);
-  }
-  return ids;
-}
-
 async function main(): Promise<void> {
-  const appIds = await loadAppIds();
+  const appIds = await loadCuratedAppIds();
   const games: CatalogGame[] = [];
   const failures: string[] = [];
 

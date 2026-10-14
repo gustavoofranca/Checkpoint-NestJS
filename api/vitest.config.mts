@@ -43,7 +43,13 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.ts'],
       // Process entry points: they parse argv and env, then call tested functions.
-      exclude: ['src/main.ts', 'src/cli/**', 'src/generated/**', 'src/**/*.spec.ts'],
+      exclude: [
+        'src/main.ts',
+        'src/worker.ts',
+        'src/cli/**',
+        'src/generated/**',
+        'src/**/*.spec.ts',
+      ],
       thresholds: { lines: 85, branches: 85 },
     },
   },
