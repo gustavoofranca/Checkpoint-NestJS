@@ -1,7 +1,10 @@
 generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma"
-  moduleFormat = "cjs"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  // Explicit: otherwise inferred from the tsconfig.json found at generate time, and the Docker
+  // build generates before copying it, which produced imports of ./internal/class.ts.
+  importFileExtension = "js"
 }
 
 datasource db {
