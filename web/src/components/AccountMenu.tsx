@@ -17,7 +17,12 @@ export function AccountMenu() {
     return <div className="h-9 w-24 rounded-control bg-surface" aria-hidden />;
   }
   if (state.status === 'signed-out') {
-    const from = encodeURIComponent(location.pathname + location.search);
+    const onAuthPage = location.pathname === '/sign-in' || location.pathname === '/sign-up';
+    const from = encodeURIComponent(
+      onAuthPage
+        ? (new URLSearchParams(location.search).get('from') ?? '/')
+        : location.pathname + location.search,
+    );
     return (
       <div className="flex shrink-0 items-center gap-2">
         <Link to={`/sign-in?from=${from}`} className={buttonClass('ghost')}>

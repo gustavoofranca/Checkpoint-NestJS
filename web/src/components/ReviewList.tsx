@@ -1,11 +1,11 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Star } from 'lucide-react';
 import { Link } from 'react-router';
 import { reviewsQuery } from '../api/queries';
 import { formatDate } from '../lib/format';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import { LoadMore } from './LoadMore';
+import { RatingBar } from './RatingBar';
 
 export function ReviewList({ slug }: { slug: string }) {
   const reviews = useInfiniteQuery(reviewsQuery(slug));
@@ -14,11 +14,7 @@ export function ReviewList({ slug }: { slug: string }) {
     return (
       <ul className="flex flex-col gap-3" aria-busy>
         {[0, 1].map((index) => (
-          <li
-            key={index}
-            aria-hidden
-            className="h-24 rounded-card border border-border bg-surface"
-          />
+          <li key={index} aria-hidden className="skeleton h-24 rounded-card border border-border" />
         ))}
       </ul>
     );
@@ -28,7 +24,9 @@ export function ReviewList({ slug }: { slug: string }) {
   }
   const list = reviews.data.pages.flatMap((page) => page.data);
   if (list.length === 0) {
-    return <EmptyState title="No reviews yet">Be the first to say what you think.</EmptyState>;
+    return (
+      <EmptyState title="No save data here yet">Be the first to say what you think.</EmptyState>
+    );
   }
   return (
     <>
@@ -43,7 +41,7 @@ export function ReviewList({ slug }: { slug: string }) {
                 {review.author.username}
               </Link>
               <span className="inline-flex items-center gap-1 tabular-nums">
-                <Star size={16} strokeWidth={1.5} className="fill-accent text-accent" aria-hidden />
+                <RatingBar value={review.rating} />
                 <span>{`${String(review.rating)} out of 5`}</span>
               </span>
               <time dateTime={review.createdAt}>{formatDate(review.createdAt)}</time>

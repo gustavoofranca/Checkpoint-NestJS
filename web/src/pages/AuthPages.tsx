@@ -2,6 +2,7 @@ import { useState, type SyntheticEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ApiError } from '../api/api-error';
 import { Button } from '../components/Button';
+import { LogoMark } from '../components/LogoMark';
 import { TextField } from '../components/TextField';
 import { useDocumentTitle } from '../lib/use-document-title';
 import { session } from '../session/session-store';
@@ -29,10 +30,15 @@ function AuthCard({
 }) {
   useDocumentTitle(title);
   return (
-    <div className="mx-auto mt-8 w-full max-w-sm rounded-card border border-border bg-surface p-6">
-      <h1 className="mb-6 text-lg">{title}</h1>
-      {children}
-      <p className="mt-6 text-sm text-muted">{footer}</p>
+    <div className="bg-dots -mx-4 -my-6 flex min-h-[calc(100vh-3.5rem)] items-start justify-center px-4 py-12 sm:-mx-6 sm:-my-8">
+      <div className="w-full max-w-sm rounded-card border border-border bg-surface p-6 shadow-xl shadow-black/30">
+        <span className="text-accent">
+          <LogoMark size={32} />
+        </span>
+        <h1 className="font-display mt-4 mb-6 text-xl font-extrabold">{title}</h1>
+        {children}
+        <p className="mt-6 text-sm text-muted">{footer}</p>
+      </div>
     </div>
   );
 }

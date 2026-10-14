@@ -1,33 +1,94 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/inter';
 
-/* Design tokens (docs/DESIGN.md). Dark is the only theme. The accent is a blue chosen once; its
-   hover and tint variants are derived from it. Text on every surface meets WCAG AA. */
+/* Design tokens (docs/DESIGN.md). Dark is the only theme. Grey is the rule and colour the
+   exception: volt marks actions, focus, ratings and the mark; each library status has its own
+   colour, used only next to that status. Every text colour meets WCAG AA on every surface. */
 @theme {
-  --color-bg: #0b0b0c;
-  --color-surface: #141416;
-  --color-raised: #1b1b1f;
-  --color-border: #26262b;
-  --color-text: #ededef;
-  --color-muted: #9a9aa3;
-  --color-accent: #3e9cf5;
-  --color-accent-hover: #63b0f7;
-  --color-accent-tint: #3e9cf51f;
-  --color-danger: #e5484d;
+  --color-bg: #0b0b0f;
+  --color-surface: #131318;
+  --color-raised: #1b1b22;
+  --color-border: #26262f;
+  --color-text: #ededf2;
+  --color-muted: #9a9aab;
+  --color-accent: #c8f031;
+  --color-accent-hover: #d6f75e;
+  --color-accent-tint: #c8f0311f;
+  --color-danger: #f2555a;
+
+  --color-playing: #4cc9f0;
+  --color-backlog: #ffb547;
+  --color-completed: #c8f031;
+  --color-dropped: #f2667a;
 
   --radius-control: 6px;
   --radius-card: 10px;
 
   --font-sans:
     'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Archivo Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
 
   --text-xs: 13px;
   --text-sm: 14px;
   --text-base: 16px;
   --text-lg: 20px;
   --text-xl: 28px;
+  --text-2xl: 40px;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-autosave: autosave 0.9s var(--ease-out) infinite;
+  --animate-pop: pop 220ms var(--ease-out);
+  --animate-orbit: orbit 600ms var(--ease-out);
+  --animate-toast-in: toast-in 180ms var(--ease-out);
+
+  @keyframes shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+  @keyframes autosave {
+    from {
+      transform: rotate(45deg);
+    }
+    to {
+      transform: rotate(225deg);
+    }
+  }
+  @keyframes pop {
+    0% {
+      transform: scale(0.9);
+    }
+    60% {
+      transform: scale(1.08);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  /* The checkpoint marker travels once around the ring of the mark. */
+  @keyframes orbit {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 @layer base {
@@ -52,12 +113,63 @@
     outline-offset: 2px;
   }
 
+  /* Cross-fade between pages; the game art keeps its own name and morphs from card to header. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 180ms;
+  }
+  ::view-transition-group(*) {
+    animation-duration: 250ms;
+    animation-timing-function: var(--ease-out);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
-    *::after {
+    *::after,
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
       transition-duration: 0ms !important;
       animation-duration: 0ms !important;
+      animation-iteration-count: 1 !important;
     }
+  }
+}
+
+@layer utilities {
+  /* Display type: Archivo, widened. Headings, the wordmark and big numbers. */
+  .font-display {
+    font-family: var(--font-display);
+    font-stretch: 118%;
+    letter-spacing: -0.02em;
+  }
+
+  /* "Level map" texture: a faint dot grid behind sign-in, empty states and the profile header. */
+  .bg-dots {
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      color-mix(in srgb, var(--color-text) 9%, transparent) 1px,
+      transparent 0
+    );
+    background-size: 16px 16px;
+  }
+
+  /* Rows that scroll sideways (genre chips, top rated): scrollable without a visible bar. */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  /* Skeleton: a low-contrast sheen, shown only once loading has taken 150 ms. */
+  .skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--color-surface) 0%,
+        var(--color-raised) 50%,
+        var(--color-surface) 100%
+      )
+      0 0 / 200% 100%;
+    animation: var(--animate-shimmer);
+    animation-delay: 150ms;
   }
 }

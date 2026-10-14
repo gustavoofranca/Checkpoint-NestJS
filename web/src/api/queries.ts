@@ -4,6 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
+import { saveIndicator } from '../save-indicator/save-indicator';
 import { api, expectNoContent, orNull, unwrap } from './client';
 import type { GameSort, LibraryEntry, LibraryStatus, Review } from './types';
 
@@ -22,6 +23,13 @@ export interface CatalogFilters {
 export const genresQuery = queryOptions({
   queryKey: ['genres'],
   queryFn: () => unwrap(api.GET('/api/v1/genres')),
+  staleTime: 5 * 60_000,
+});
+
+export const featuredQuery = queryOptions({
+  queryKey: ['featured'],
+  queryFn: () =>
+    unwrap(api.GET('/api/v1/games', { params: { query: { sort: 'top_rated', limit: 8 } } })),
   staleTime: 5 * 60_000,
 });
 
@@ -121,6 +129,7 @@ function useInvalidateAfterReview(slug: string) {
       client.invalidateQueries({ queryKey: ['game', slug] }),
       client.invalidateQueries({ queryKey: ['reviews', slug] }),
       client.invalidateQueries({ queryKey: ['games'] }),
+      client.invalidateQueries({ queryKey: ['featured'] }),
       client.invalidateQueries({ queryKey: ['profile'] }),
     ]);
   };
@@ -134,6 +143,12 @@ export function useSaveReview(slug: string) {
       unwrap(
         api.PUT('/api/v1/games/{slug}/reviews/me', { params: { path: { slug } }, body: review }),
       ),
+    onMutate: () => {
+      saveIndicator.start();
+    },
+    onSettled: (_saved, error) => {
+      saveIndicator.finish(error === null);
+    },
     onSuccess: async (saved: Review) => {
       client.setQueryData(ownReviewQuery(slug).queryKey, saved);
       await invalidate();
@@ -149,6 +164,12 @@ export function useDeleteReview(slug: string) {
       expectNoContent(
         api.DELETE('/api/v1/games/{slug}/reviews/me', { params: { path: { slug } } }),
       ),
+    onMutate: () => {
+      saveIndicator.start();
+    },
+    onSettled: (_result, error) => {
+      saveIndicator.finish(error === null);
+    },
     onSuccess: async () => {
       client.setQueryData(ownReviewQuery(slug).queryKey, null);
       await invalidate();
@@ -174,6 +195,7 @@ export function useSetLibraryStatus(game: LibraryEntry['game']) {
             }),
           ),
     onMutate: async (status) => {
+      saveIndicator.start();
       await client.cancelQueries({ queryKey: key });
       const previous = client.getQueryData(key);
       const optimistic: LibraryEntry | null =
@@ -185,7 +207,8 @@ export function useSetLibraryStatus(game: LibraryEntry['game']) {
       const previous = context?.previous ?? null;
       client.setQueryData(key, () => previous);
     },
-    onSettled: async () => {
+    onSettled: async (_entry, error) => {
+      saveIndicator.finish(error === null);
       await client.invalidateQueries({ queryKey: ['library'] });
     },
   });

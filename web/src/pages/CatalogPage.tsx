@@ -5,6 +5,7 @@ import type { GameSort } from '../api/types';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
+import { FeaturedRow } from '../components/FeaturedRow';
 import { GameCard, GameCardSkeleton } from '../components/GameCard';
 import { LoadMore } from '../components/LoadMore';
 import { useDocumentTitle } from '../lib/use-document-title';
@@ -46,6 +47,7 @@ export function CatalogPage() {
   return (
     <>
       <h1 className="sr-only">Game catalog</h1>
+      {filters.q === '' && filters.genre === '' && <FeaturedRow />}
       <Filters filters={filters} onChange={update} />
       <Games
         filters={filters}
@@ -76,7 +78,7 @@ function Filters({ filters, onChange }: FiltersProps) {
       <div
         role="group"
         aria-label="Filter by genre"
-        className="-mx-4 flex min-w-0 flex-1 gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0"
+        className="scrollbar-none -mx-4 flex min-w-0 flex-1 gap-2 overflow-x-auto px-4 py-1 sm:mx-0 sm:px-0"
       >
         <button
           type="button"
@@ -146,7 +148,7 @@ function Games({ filters, onClearSearch }: { filters: CatalogFilters; onClearSea
   if (list.length === 0) {
     return (
       <EmptyState
-        title={filters.q === '' ? 'No games in this genre yet' : `No games match “${filters.q}”`}
+        title={filters.q === '' ? 'No games in this genre yet' : `No save data for “${filters.q}”`}
       >
         <Button onClick={onClearSearch}>Show every game</Button>
       </EmptyState>

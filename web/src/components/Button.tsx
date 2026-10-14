@@ -10,7 +10,7 @@ const VARIANTS: Record<Variant, string> = {
 };
 
 export function buttonClass(variant: Variant = 'secondary'): string {
-  return `inline-flex h-9 items-center justify-center gap-2 rounded-control px-3 text-sm font-medium transition-colors duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]}`;
+  return `inline-flex h-9 items-center justify-center gap-2 rounded-control px-3 text-sm font-medium transition-colors duration-150 ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]}`;
 }
 
 // React 19 passes ref as a prop, so ComponentProps includes it.
