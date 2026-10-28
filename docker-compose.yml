@@ -41,7 +41,7 @@ services:
   # api/Dockerfile (docker-compose.prod.yml).
   worker:
     profiles: [worker]
-    image: node:24.21.0-bookworm-slim
+    image: node:26.12.0-bookworm-slim
     user: node
     working_dir: /app
     command: ['node', 'dist/worker.js']
