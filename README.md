@@ -79,7 +79,7 @@ reviews.` and is safe to run again.
 | URL | What |
 | --- | --- |
 | http://localhost:8080 | Web app. Sign in as `ana@checkpoint.test` or `bruno@checkpoint.test` with `SEED_DEMO_PASSWORD` |
-| http://localhost:8080/api/v1/docs | Swagger UI |
+| http://localhost:3000/api/v1/docs | Swagger UI, on the API's own port: the web app's Content Security Policy would block its inline styles |
 | http://localhost:8080/api/v1/health/ready | Readiness: PostgreSQL and Redis |
 
 To try the admin endpoints, promote an account and sign in again:
