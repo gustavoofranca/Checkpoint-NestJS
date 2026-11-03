@@ -117,6 +117,29 @@ services:
     healthcheck:
       disable: true
 
+  # Loads the bundled Steam snapshot, the two demo accounts and their reviews, then exits. Safe to
+  # run again. Only on demand, for a local or demo stack:
+  #   docker compose -f docker-compose.prod.yml --profile seed run --rm seed
+  seed:
+    image: checkpoint-api
+    profiles: [seed]
+    restart: 'no'
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    command: ['node', 'dist/cli/seed.js']
+    environment:
+      DATABASE_URL: postgresql://${APP_DB_USER}:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # Not required here: Compose interpolates every service, even ones in an inactive profile,
+      # and a production stack has no use for it. The seed itself refuses an empty password.
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-}
+    healthcheck:
+      disable: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
 volumes:
   postgres-data:
   redis-data:
