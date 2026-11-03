@@ -15,8 +15,9 @@ come from a command the reader can run.
 2. **Badges**, at most four: CI status, coverage, license, Node version
 3. **Screenshot** of the catalog screen, and the live demo link if deployed
 4. **What it does**, five or six bullets
-5. **Architecture**: one Mermaid diagram (client, API, worker, PostgreSQL, Redis, Steam) and a
-   short paragraph. Link to `docs/ARCHITECTURE.md`.
+5. **Architecture**: one plain-text diagram in a code block (client, API, worker, PostgreSQL,
+   Redis, Steam) and a short paragraph. Link to `docs/ARCHITECTURE.md`. Plain text, not
+   Mermaid: it reads the same on GitHub, in a terminal and in an editor.
 6. **Quick start**: clone, `cp .env.example .env`, `docker compose up`, migrate and seed,
    open the URLs. It must work on a clean machine with only Docker installed. Test it.
 7. **API overview**: table of endpoints, link to Swagger, two `curl` examples (list games,
