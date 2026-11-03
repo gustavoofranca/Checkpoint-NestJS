@@ -14,6 +14,64 @@ Updated by the agent at the end of every phase. Newest entry first.
 
 ---
 
+### P10 — Documentation and release — 2026-11-03
+- Status: done, except the `v1.0.0` tag, which the author creates
+- Built:
+  - `README.md` following `docs/DOCUMENTATION.md`, written from the code: quick start, API
+    overview with two `curl` examples, engineering notes linking into the code, test and load
+    numbers measured on this commit, security summary, ADR list, limitations
+  - `LICENSE` (MIT), root `SECURITY.md` (GitHub private vulnerability reporting, now enabled),
+    `CHANGELOG.md` (one entry per phase), `docs/adr/README.md` (index of the 11 ADRs)
+  - `docker-compose.prod.yml`: one-shot `seed` service under the `seed` profile, run from the
+    runtime image as the application role, so the quick start needs only Docker
+  - Fix found by the quick start: the `web` service never served. Its tmpfs on
+    `/etc/nginx/conf.d` took root ownership from the image directory, nginx (uid 101) could not
+    render its template and started with no server. Mounted for uid 101 now, and the service has
+    a health check, so `up --wait` fails when nginx serves nothing
+- Decisions not dictated by the spec:
+  - Architecture diagram in plain text, not Mermaid (author's choice); `DOCUMENTATION.md`
+    updated
+  - Quick start on the production compose: the same hardened stack a deployment runs, with
+    three local settings (`CORS_ORIGINS`, `TRUST_PROXY_HOPS=1`, `ENABLE_DOCS=true`)
+  - Swagger UI linked on the API's port (3000): through the web container it gets nginx's CSP
+    too, whose `style-src 'self'` blocks Swagger's inline styles. Loosening the app's CSP for
+    the docs was not worth it
+  - Coverage as a number in the README, not a badge: a static badge goes stale, a live one
+    needs an external service
+  - `SEED_DEMO_PASSWORD` defaults to empty in the compose file, because Compose interpolates
+    services of inactive profiles too; the seed itself refuses an empty password
+  - No VPS deployment guide (author's choice): it could not be verified on a real server
+- Dependencies added (name@version): none. Tool run once from its image, pinned by digest:
+  lycheeverse/lychee:0.24.2
+- Verification (command → result):
+  - Fresh clone of the branch from GitHub into an empty directory, commands of the README run
+    as written with no Node on the path: `up -d --build --wait` → every service healthy in
+    1 min 40 s (build included); `--profile seed run --rm seed` → "Seeded 211 games and 12
+    genres; created 2 demo users and 16 demo reviews."; again → "created 0 demo users and 0
+    demo reviews"
+  - `http://localhost:8080/` → 200; `http://localhost:3000/api/v1/docs` → 200;
+    `/api/v1/health/ready` → 200
+  - README `curl` examples: top rated → 3 games and a `nextCursor`; login then `PUT` review
+    of `portal-2` → 200 with the review; `promote-admin.js` → "demo_ana is now ADMIN", then
+    `/admin/sync/runs` → 200 for her and 403 for demo_bruno
+  - Through nginx: login sets the refresh cookie (`HttpOnly; Secure; SameSite=Strict;
+    Path=/api/v1/auth`); refresh with the web origin → 200, without `Origin` → 403
+  - Negative control of the health check: the old tmpfs line → `up --wait` exits 1 with
+    "container checkpoint-prod-web-1 is unhealthy"; the fixed one → exit 0
+  - `npm run test:cov` (api) → 396 of 396; statements 98.08%, lines 98.05%, branches 86.28%;
+    web `npm test` → 15 of 15
+  - `load/run.sh` (i5-1240P): uncached p95 31.65 ms (258 requests), cached p95 2 ms (6001
+    requests at 200/s), 0 errors
+  - lychee over every Markdown file, fragments included, `localhost` excluded → 73 OK,
+    0 errors, 3 excluded; negative control with a missing anchor → "Cannot find fragment"
+- Known limitations / open questions:
+  - The web UI was not opened in a browser in this phase (the browser tools were disconnected);
+    the HTTP checks above and the P9 browser checks cover it
+  - No CI job runs the quick start; the production compose is still checked by hand
+  - The `v1.0.0` tag and GitHub Release are left to the author
+
+---
+
 ### P9 — Web UI — 2026-11-03
 - Status: done
 - Built:

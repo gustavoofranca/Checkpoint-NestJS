@@ -10,6 +10,8 @@ each phase, is in [docs/PROGRESS.md](docs/PROGRESS.md).
 - README with the quick start, API overview, engineering notes, measured test and load numbers
 - Root `SECURITY.md`, this changelog, the MIT license and an index of the ADRs
 - One-shot `seed` service in `docker-compose.prod.yml`, so the quick start needs only Docker
+- Fix: the `web` service of `docker-compose.prod.yml` started nginx with no server (its tmpfs
+  was not writable by nginx); it now serves and has a health check
 
 ### P9 — Web UI — 2026-11-03
 
