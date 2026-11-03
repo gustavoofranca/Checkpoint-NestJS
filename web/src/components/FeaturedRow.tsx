@@ -15,7 +15,10 @@ export function FeaturedRow() {
       <h2 id="featured-heading" className="font-display mb-3 text-lg font-bold">
         Top rated
       </h2>
-      <ul className="scrollbar-none -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6">
+      {/* contain: paint. Without it, Chrome counted the off-screen cards in the page's own scroll
+          width (2528 px on a 1265 px page, measured) and the whole page scrolled sideways, even
+          though this list is a scroll container. overflow: hidden on the section did not help. */}
+      <ul className="scrollbar-none [contain:paint] -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6">
         {games.map((game) => (
           <GameCard key={game.id} game={game} featured />
         ))}
