@@ -18,6 +18,9 @@ updates:
         patterns: ['prisma', '@prisma/*']
       lint-and-format:
         patterns: ['eslint', '@eslint/*', 'typescript-eslint', 'eslint-config-prettier', 'prettier']
+      # @vitest/coverage-v8 requires the exact same vitest version; apart they fail CI.
+      vitest:
+        patterns: ['vitest', '@vitest/*']
     ignore:
       - dependency-name: typescript
         update-types: ['version-update:semver-major']

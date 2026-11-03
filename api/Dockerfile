@@ -2,7 +2,7 @@
 #   docker build -t checkpoint-api .                     the API; the worker runs dist/worker.js
 #   docker build -t checkpoint-migrate --target migrate .  applies migrations, then exits
 # The base image is pinned by digest; Dependabot proposes updates.
-ARG NODE_IMAGE=node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20
+ARG NODE_IMAGE=node:24.22.2-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c
 
 FROM ${NODE_IMAGE} AS build
 WORKDIR /app
