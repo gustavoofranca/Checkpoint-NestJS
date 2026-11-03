@@ -1,0 +1,37 @@
+# Serves the built web app and forwards /api to the API, so the browser talks to one origin:
+# the refresh cookie (Path=/api/v1/auth, SameSite=Strict) works without CORS.
+# ${API_UPSTREAM} is filled in by the image's entrypoint (envsubst), e.g. http://api:3000.
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+
+    # Defined once here; no location below uses add_header, which would drop these.
+    # Scripts, styles and fonts from this origin only; images also from the Steam CDN hosts the
+    # API accepts (api/src/modules/sync/steam/normalize-steam-app.ts). The build has no inline
+    # script or style.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://shared.akamai.steamstatic.com https://shared.fastly.steamstatic.com https://shared.cloudflare.steamstatic.com https://cdn.akamai.steamstatic.com https://cdn.fastly.steamstatic.com https://cdn.cloudflare.steamstatic.com; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    location /api/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # File names under /assets carry a content hash, so they can be cached for good.
+    location /assets/ {
+        expires 1y;
+        try_files $uri =404;
+    }
+
+    # Every other path is a client-side route: answer with index.html, never cached.
+    location / {
+        expires -1;
+        try_files $uri /index.html;
+    }
+}

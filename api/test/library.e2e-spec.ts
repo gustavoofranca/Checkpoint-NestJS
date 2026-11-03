@@ -136,6 +136,34 @@ describe('library', () => {
       .expect(400);
   });
 
+  describe('GET /me/library/:gameId', () => {
+    const getEntry = (user: Signed, gameId: string) =>
+      http().get(`/api/v1/me/library/${gameId}`).set('Authorization', auth(user));
+
+    it('returns the caller’s entry for the game with its status', async () => {
+      const ana = await registerAndLogin(app);
+      await setStatus(ana, gameAt(0), LibraryStatus.COMPLETED).expect(200);
+
+      const response = await getEntry(ana, gameAt(0)).expect(200);
+
+      expect(response.body).toMatchObject({
+        game: { id: gameAt(0) },
+        status: LibraryStatus.COMPLETED,
+      });
+    });
+
+    it('answers 404 for a game the caller has not added, even if someone else has', async () => {
+      const [ana, bruno] = await Promise.all([registerAndLogin(app), registerAndLogin(app)]);
+      await setStatus(bruno, gameAt(0), LibraryStatus.PLAYING).expect(200);
+
+      await getEntry(ana, gameAt(0)).expect(404);
+    });
+
+    it('answers 400 for a game id that is not a UUID', async () => {
+      await getEntry(await registerAndLogin(app), 'not-a-uuid').expect(400);
+    });
+  });
+
   describe('one user cannot see or change another user’s library', () => {
     it('lists only the caller’s entries', async () => {
       const [ana, bruno] = await Promise.all([registerAndLogin(app), registerAndLogin(app)]);

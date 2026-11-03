@@ -14,6 +14,79 @@ Updated by the agent at the end of every phase. Newest entry first.
 
 ---
 
+### P9 — Web UI — 2026-11-03
+- Status: done
+- Built:
+  - `web/`: Vite 8, React 19, TypeScript 6 strict, Tailwind 4, TanStack Query 5, React Router 8.
+    Catalog (Top rated row, genre chips, sort, debounced search in the URL, infinite scroll with a
+    Load more fallback), game page, sign in and sign up, profile with library tabs, 404 and a
+    route error page with retry
+  - API client typed from `api/openapi.json` (`openapi-typescript` + `openapi-fetch`); CI checks
+    the generated types against the document
+  - Session in memory: the access token in a variable, restored on load and renewed a minute
+    before expiry through the refresh cookie, one refresh shared by concurrent callers; data that
+    belongs to an account is dropped from the query cache when the account changes. Lint forbids
+    `localStorage`, `sessionStorage` and `dangerouslySetInnerHTML`
+  - Identity (`docs/DESIGN.md`, Identity): provisional mark, volt accent, Archivo display type,
+    status colours and icons, five-segment rating bar, autosave toast, game header lit by its own
+    art, view transitions from card to game page, dot-grid texture
+  - `web/Dockerfile`: build, then unprivileged nginx (uid 101) serving the app and forwarding
+    `/api`; strict CSP and security headers; `web` service in `docker-compose.prod.yml`
+  - API: `GET /games/:slug/reviews/me` and `GET /me/library/:gameId` (own data only, 404 when
+    absent; added to SPEC and the authorization matrix); `limit` typed as an integer in OpenAPI
+  - Seed: 16 idempotent demo reviews; the rating recompute moved to `rating-aggregate.ts`
+  - Screenshots for the README in `docs/screenshots/`
+- Decisions not dictated by the spec:
+  - One origin: the Vite proxy (development) and nginx (production) forward `/api`, so the refresh
+    cookie (`Path=/api/v1/auth`, `SameSite=Strict`) works without CORS and the CSP needs only
+    `connect-src 'self'`
+  - The two "own" read routes, because the game page needs the caller's review and status
+    without paging through every review or the whole library
+  - Visual identity chosen by Gustavo from `checkpoint-kit/PLANO-IDENTIDADE-VISUAL.md`: mark A,
+    volt `#c8f031`, Archivo, Top rated row; no library composition bar (no API change)
+  - Native `select` for sorting; Radix only for the account menu and the profile tabs
+  - `openapi-typescript` declares a TypeScript 5 peer; an `overrides` entry lets it use the
+    project's TypeScript 6, and its output is checked in CI
+  - `eslint-plugin-jsx-a11y` left out (no ESLint 10 support); accessibility proved by Lighthouse
+    and by tests that query by role
+- Dependencies added (name@version): web: react@19.3.0, react-dom@19.3.0, react-router@8.4.0,
+  @tanstack/react-query@5.104.2, openapi-fetch@0.17.0, lucide-react@1.57.0,
+  @radix-ui/react-dropdown-menu@2.2.1, @radix-ui/react-tabs@1.2.1,
+  @fontsource-variable/inter@5.3.0, @fontsource-variable/archivo@5.3.0; dev: vite@8.3.4,
+  @vitejs/plugin-react@6.1.2, typescript@6.0.3, tailwindcss@4.3.3, @tailwindcss/vite@4.3.3,
+  openapi-typescript@7.13.0, eslint@10.12.0, @eslint/js@10.0.1, typescript-eslint@8.71.2,
+  eslint-plugin-react-hooks@7.1.1, eslint-config-prettier@10.1.8, globals@17.13.0,
+  prettier@3.9.10, vitest@5.0.4, jsdom@30.1.2, @testing-library/react@16.3.3,
+  @testing-library/dom@10.4.2, @testing-library/user-event@14.6.8, @types/react@19.3.0,
+  @types/react-dom@19.3.0, @types/node@24.19.1
+- Verification (command → result):
+  - A new visitor, in Chrome against the production image: browses and searches, signs up and
+    returns to the game page signed in, sets a library status, rates by keyboard, publishes
+    (autosave toast "Progress saved"), finds the review on the profile; a reload keeps the session
+    with nothing in `localStorage` or `sessionStorage`
+  - Lighthouse accessibility: 100 on the catalog, 100 on the game page (signed in, with the
+    review form); best practices 100
+  - 360 px: no horizontal scroll on the catalog, game, profile, sign-in and 404 pages; the header
+    shows the mark alone below 640 px
+  - Keyboard: skip link, visible focus ring, rating radio group with arrow keys, `/` focuses the
+    search
+  - `curl -D -` on the web container: the CSP and security headers are sent; the build has no
+    inline script or style and no source maps
+  - web: lint, format, typecheck, 15 of 15 tests, build pass; `npm audit --omit=dev` → 0
+  - api: `npm run test:cov` → 396 of 396; lines 98.1%, branches 86.3%
+- Known limitations / open questions:
+  - Lighthouse ran in snapshot mode: navigation mode failed with NO_FCP because the automated
+    browser window was not in the foreground
+  - Chrome 156 counted the off-screen cards of the Top rated row in the page's scroll width
+    although the row is a scroll container; `contain: paint` on the row prevents it. Found only
+    once the row had content, after the first 360 px check
+  - The view transition from card to game page works only in browsers with View Transitions;
+    elsewhere the page changes at once
+  - The 401 logged by the browser when an anonymous visitor's session restore finds no cookie is
+    expected and stays in the console
+
+---
+
 ### P8 — Hardening and review — 2026-10-14
 - Status: done, except "CI fully green": the branch is not pushed yet
 - Built:

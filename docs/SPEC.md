@@ -101,6 +101,7 @@ Login and register failures must not reveal whether an email is registered.
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | GET | `/games/:slug/reviews` | none | Newest first, with author username. |
+| GET | `/games/:slug/reviews/me` | USER | The caller's review, for the edit form. 404 if none. Added in P9. |
 | PUT | `/games/:slug/reviews/me` | USER | Creates or replaces the caller's review. |
 | DELETE | `/games/:slug/reviews/me` | USER | 204. |
 
@@ -112,6 +113,7 @@ own review. Keep it that way.
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | GET | `/me/library` | USER | Filter by `status`. |
+| GET | `/me/library/:gameId` | USER | One entry with its status, for the game page. 404 if absent. Added in P9. |
 | PUT | `/me/library/:gameId` | USER | Body: `status`. Upsert. |
 | DELETE | `/me/library/:gameId` | USER | 204. |
 | GET | `/users/:username` | none | Public profile: username, join date, review count, latest reviews. Never email. |

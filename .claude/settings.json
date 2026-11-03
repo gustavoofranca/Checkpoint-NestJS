@@ -1,7 +1,9 @@
 {
   "permissions": {
     "deny": [
-      "Bash(git push:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push --force-with-lease:*)",
       "Bash(git reset --hard:*)",
       "Bash(git rebase:*)",
       "Bash(rm -rf:*)",
@@ -10,6 +12,11 @@
       "Read(./.env)",
       "Read(./api/.env)",
       "Read(./web/.env)"
+    ],
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm ci:*)",
+      "Bash(git push:*)"
     ]
   }
 }

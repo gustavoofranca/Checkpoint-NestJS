@@ -5,8 +5,11 @@
 # Every variable is listed in .env.example. Generate passwords with `openssl rand -hex 32`: they
 # are placed in connection URLs, so they must not contain URL syntax characters.
 #
-# PostgreSQL and Redis publish no ports. The API listens on 127.0.0.1 only, for a reverse proxy
-# that terminates TLS in front of it (TRUST_PROXY_HOPS=1). The API and the worker connect to
+# PostgreSQL and Redis publish no ports. The web container (nginx) serves the app and forwards /api
+# to the API, so browsers use one origin; put the TLS-terminating reverse proxy in front of it, on
+# 127.0.0.1:WEB_PORT. The API also listens on 127.0.0.1:API_PORT for direct use. Requests through
+# the web container cross two proxies (TLS proxy, nginx): set TRUST_PROXY_HOPS=2 there, and
+# CORS_ORIGINS to the public origin of the web app. The API and the worker connect to
 # PostgreSQL as APP_DB_USER, which cannot change the schema; only the one-shot migrate service
 # uses the owner role (deploy/postgres/10-app-role.sh).
 name: checkpoint-prod
@@ -88,6 +91,24 @@ services:
     <<: *app
     ports:
       - '127.0.0.1:${API_PORT:-3000}:3000'
+
+  web:
+    image: checkpoint-web
+    build:
+      context: ./web
+    restart: unless-stopped
+    read_only: true
+    # nginx writes its pid and temporary files to /tmp and renders its config into conf.d.
+    tmpfs: [/tmp, /etc/nginx/conf.d]
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    environment:
+      API_UPSTREAM: http://api:3000
+    ports:
+      - '127.0.0.1:${WEB_PORT:-8080}:8080'
+    depends_on:
+      api:
+        condition: service_healthy
 
   worker:
     <<: *app

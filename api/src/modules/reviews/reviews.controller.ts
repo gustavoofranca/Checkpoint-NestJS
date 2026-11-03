@@ -35,6 +35,18 @@ export class ReviewsController {
     return this.reviews.listForGame(params.slug, query);
   }
 
+  @Get('me')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Your review of a game' })
+  @ApiOkResponse({ type: ReviewDto })
+  @ApiProblemResponses(400, 401, 404)
+  getOwn(
+    @Param() params: GameSlugParamDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ReviewDto> {
+    return this.reviews.getOwn(user.id, params.slug);
+  }
+
   @Put('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create or replace your review of a game' })
