@@ -34,11 +34,19 @@ updates:
         patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
       lint-and-format:
         patterns: ['eslint', '@eslint/js', 'typescript-eslint', 'eslint-*', 'prettier']
+    ignore:
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: docker
     directory: /web
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: docker
     directory: /api
