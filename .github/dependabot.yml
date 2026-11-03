@@ -1,5 +1,9 @@
 # Weekly update pull requests. Versions stay exact: Dependabot rewrites the pinned version, the
 # lockfile, the image digests and the action SHAs.
+#
+# Majors that need a deliberate migration are ignored here and done by hand: TypeScript (the
+# typescript-eslint and Nest CLI releases in use support up to 6.0), Node and its types (the
+# whole project, .nvmrc, Dockerfile and compose, moves at once).
 version: 2
 updates:
   - package-ecosystem: npm
@@ -14,6 +18,11 @@ updates:
         patterns: ['prisma', '@prisma/*']
       lint-and-format:
         patterns: ['eslint', '@eslint/*', 'typescript-eslint', 'eslint-config-prettier', 'prettier']
+    ignore:
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: npm
     directory: /web
@@ -35,13 +44,23 @@ updates:
     directory: /api
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: docker-compose
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # Every step of a workflow must run the same CodeQL version, or the analysis fails.
+      codeql:
+        patterns: ['github/codeql-action*']
